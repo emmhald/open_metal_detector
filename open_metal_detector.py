@@ -21,8 +21,6 @@ import math
 import random
 from atomic_parameters import atoms
 
-#target_folder='xyz_files/'
-#filetype='xyz'
 atom=atoms()
 target_folder='CORE-MOF-DB-June2014/'
 filetype='cif'
@@ -186,13 +184,10 @@ def find_first_coordination_sphere(metal,structure_full):
             first_coordnation_list_species=[]
             first_coordnation_list_coords=[]
             for i,dis in enumerate(dist[0]):
-                #if dis < (1+tol)*min_dist:
                 bond_tol=get_bond_tolerance(str(metal.species[m]),str(structure.species[i]))*increase
                 if bond_check(str(metal.species[m]),str(structure.species[i]),dis,bond_tol):
                     first_coordnation_list_species.append(structure.species[i])
                     first_coordnation_list_coords.append(structure.frac_coords[i])
-                    #first_coordnation_structure_each_metal[m].append(structure.species[i],structure.frac_coords[i])
-                    #first_coordination_structure.append(structure.species[i],structure.frac_coords[i])
                     bonds_found+=1
             if check_if_enough_bonds(bonds_found,increase,str(metal.species[m])):
                 break
@@ -225,14 +220,6 @@ def make_latice_from_xyz(xyz):
     return lattice
 
 def make_system_from_xyz(xyz):
-
-#    for coord in range(0,xyz.number_of_atoms):
-#        print coord
-#            coord=[self.ref.coords[str(ads_atoms)][ref_x],self.ref.coords[str(ads_atoms)][ref_y],self.ref.coords[str(ads_atoms)][ref_z]]
-#            coord=np.dot(self.uc_vector_frac,coord)
-#            coord=np.dot(self.lattice_matrix,coord)
-#            coord=list(coord)
-
     lattice=make_latice_from_xyz(xyz)
     elements,coords=xyz.return_mp_structure_lists()
     structure=Structure(lattice,elements,coords,coords_are_cartesian=True)
@@ -278,11 +265,6 @@ def check_if_open(system):
     open_metal_mof=False
     dihedral_tolerance=5
     num=system.num_sites
-#    if num-1 == 3:
-#        open_metal_mof=True
-#        problematic=True
-#        test['4_or_less']=True
-#        return open_metal_mof,problematic,test
     max_cordination=3
     if atom.is_lanthanide_or_actinide(str(system.species[0])):
         max_cordination=5
@@ -298,15 +280,6 @@ def check_if_open(system):
 
     return open_metal_mof,problematic,test
 
-    #if number_of_tetras ==0:
-#        print 'A tetrahedral coordination sphere was NOT found'
-#        return False
-#    elif number_of_tetras ==1:
-#        print 'A tetrahedral coordination sphere was found'
-#        return True
-#    else:
-#        print 'More than one tetrahedrals were found.. Something went wrong!!!'
-#      #  sys.exit()
 
 def check_metal_dihedrals(system,test):
     open_metal_mof=False
@@ -398,13 +371,6 @@ def check_non_metal_dihedrals(system,test):
                                     if check_positive(dihedrals_other) and check_negative(dihedrals_other):
                                         pass
                                     else:
-                                        #print i,j,k,l
-                                        #print dihedral
-                                        #print dihedrals_other
-                                        #print num
-                                        #print other_indeces
-                                        #print dihedrals_other
-                                        #raw_input()
                                         open_metal_mof=True
                                         test['same_side']=True
 
@@ -425,12 +391,6 @@ def check_if_plane_on_metal(m_i,indeces,system):
                         #print dihedral
                         return True
     return False
-#    if pyramidal_dihedrals == all_dihedrals and n-1 ==4:
-#        open_metal_mof=False
-#        test['tetrahedron']=True
-#    else:
-#        open_metal_mof=True
-
 
 
 def check_positive(N):
@@ -581,10 +541,6 @@ def sphere_area(metal_element,probe_r):
 def generate_random_position(center,metal,vdw_probe):
     r=generate_random_vector()
     dist=atom.get_vdf_radius(metal)+vdw_probe
-    #print dist
-    #print r
-    #print center
-    #raw_input()
     pos=list(rr*dist for rr in r)
     pos=[i+j for i,j in zip(pos, center)]
     return pos
@@ -618,8 +574,6 @@ def check_if_heavy_metal_bond(ele1,ele2):
     else:
         return False
 def is_heavy_metal(ele): #\m/
-    #heavy_metal_list=['Ce']
-    #if ele in heavy_metal_list:
     if atom.get_covelent_radius(ele) > 1.95:
          return True
     else:
