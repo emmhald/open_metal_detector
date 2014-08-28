@@ -106,12 +106,17 @@ def analyze_structure(filename,uc_params):
 
     count_omsites=0
     for m,open_metal_candidate in enumerate(first_coordnation_structure_each_metal):
-        op,pr,t=check_if_open(open_metal_candidate)
+        op,pr,t,ads=check_if_open(open_metal_candidate)
         if op:
             count_omsites+=1
-            op_with_adsorbate=find_adsorption_site(open_metal_candidate)
-            xyz_op_with_adsorbate=xyz_file()
-            xyz_op_with_adsorbate.make_xyz(output_folder+'/'+mof_name+'_first_coordination_sphere_with_ads'+str(count_omsites)+'.xyz',op_with_adsorbate.cart_coords,op_with_adsorbate.species)
+            print len(ads)
+            if len(ads)>0:
+                mof_with_co2=merge_structures(ads,system)
+                xyz_op_with_adsorbate=xyz_file()
+                xyz_op_with_adsorbate.make_xyz(output_folder+'/'+mof_name+'_first_coordination_sphere_with_ads'+str(count_omsites)+'.xyz',mof_with_co2.cart_coords,mof_with_co2.species)
+
+          #  op_with_adsorbate=find_adsorption_site(open_metal_candidate)
+
             open_metal_site=op
             problematic_structure=pr
             test.append(t)
@@ -261,7 +266,6 @@ def check_if_open(system):
     test['4_or_less']=False
     test['non_TD']=False
 
-
     open_metal_mof=False
     dihedral_tolerance=5
     num=system.num_sites
@@ -272,13 +276,18 @@ def check_if_open(system):
         open_metal_mof=True
         problematic=True
         test['4_or_less']=True
-        return open_metal_mof,problematic,test
-
-    open_metal_mof,test=check_non_metal_dihedrals(system,test)
+        v1=system.cart_coords[0]
+        v2=system.cart_coords[1]
+        v3=system.cart_coords[2]
+        v4=system.cart_coords[2]
+        ads=add_co2(v1,v2,v3,v4,system)
+        return open_metal_mof,problematic,test,ads
+    ads=[]
+    open_metal_mof,test,ads=check_non_metal_dihedrals(system,test)
     if num-1 == 4 and not open_metal_mof:
-        open_metal_mof,test=check_metal_dihedrals(system,test)
+        open_metal_mof,test,ads=check_metal_dihedrals(system,test)
 
-    return open_metal_mof,problematic,test
+    return open_metal_mof,problematic,test,ads
 
 
 def check_metal_dihedrals(system,test):
@@ -323,9 +332,18 @@ def check_metal_dihedrals(system,test):
             raw_input()
         else:
             open_metal_mof=False
-    return open_metal_mof,test
+    metal_cluster_with_adsorbate=[]
+    if open_metal_mof and test['metal_plane']:
+        v1=system.cart_coords[0]
+        v2=system.cart_coords[1]
+        v3=system.cart_coords[2]
+        v4=system.cart_coords[3]
+            
+    metal_cluster_with_adsorbate=add_co2(v1,v2,v3,v4,system)
+    return open_metal_mof,test,metal_cluster_with_adsorbate
 
 def check_non_metal_dihedrals(system,test):
+    num=system.num_sites
     open_metal_mof=False
     crit=dict()
     tol=dict()
@@ -333,13 +351,24 @@ def check_non_metal_dihedrals(system,test):
     tol['plane']=30
     crit['tetrahedron']=70
     tol['tetrahedron']=10
+    if num-1==4:
+        test_type='tetrahedron'
+        om_type='non_TD'
+    elif num-1 == 5:
+        test_type='plane'
+        om_type='plane'
+    elif num-1 > 5:
+        test_type='plane'
+        om_type='same_side'
 
+#    print num-1,om_type
+#    raw_input()
     number_of_tetras=0
     all_dihedrals=0
     pyramidal_dihedrals=0
 
     all_dihedrals=0
-    num=system.num_sites
+    
     for i in range(1,num):
         for j in range(1,num):
             for k in range(1,num):
@@ -349,33 +378,101 @@ def check_non_metal_dihedrals(system,test):
                     else:
                         #all_dihedrals+=1
                         dihedral=abs(system.get_dihedral(i,j,k,l))
-                        if num-1==4:
-                            if abs(dihedral-crit['tetrahedron'])< tol['tetrahedron'] or abs(dihedral-crit['tetrahedron']+180)< tol['tetrahedron']:
-                                pass #pyramidal_dihedrals+=1
+                        if abs(dihedral-crit[test_type])< tol[test_type] or abs(dihedral-crit[test_type]+180)< tol[test_type]:
+                            if test_type == 'tetrahedron':
+                                pass
                             else:
-                                test['non_TD']=True
-                                open_metal_mof=True
-                        if num-1==5:
-                            if abs(dihedral-crit['plane'])< tol['plane'] or abs(dihedral-crit['plane']+180)< tol['plane']:
-                                open_metal_mof=True
-                                test['plane']=True
-                        if num-1>5:
-                            if abs(dihedral-crit['plane'])< tol['plane'] or abs(dihedral-crit['plane']+180)< tol['plane']:
-                                test['plane']=True
-                                if check_if_plane_on_metal(0,[i,j,k,l],system):
-                                    other_indeces=find_other_indeces([0,i,j,k,l],num)
-                                    #check if other atoms are all in the same side of the plane
-                                    dihedrals_other=[]
-                                    for o_i in other_indeces:
-                                        dihedrals_other.append(system.get_dihedral(j,k,l,o_i))
-                                    if check_positive(dihedrals_other) and check_negative(dihedrals_other):
-                                        pass
-                                    else:
-                                        open_metal_mof=True
-                                        test['same_side']=True
+                                check=True
+                                if num-1>5:
+                                    test['plane']=True
+                                    plane_found=[i,j,k,l]
+                                    check=False
+                                    test[test_type]=True
+                                    if check_if_plane_on_metal(0,[i,j,k,l],system):
+                                        other_indeces=find_other_indeces([0,i,j,k,l],num)
+                                        #check if other atoms are all in the same side of the plane
+                                        dihedrals_other=[]
+                                        for o_i in other_indeces:
+                                            dihedrals_other.append(system.get_dihedral(j,k,l,o_i))
+                                        if check_positive(dihedrals_other) and check_negative(dihedrals_other):
+                                            pass
+                                        else:
+                                            check=True
+                                if check:
+                                    test[om_type]=True
+                                    open_metal_mof=True
 
-    return open_metal_mof,test
+                        else:
+                            if test_type == 'tetrahedron':
+                                test[om_type]=True
+                                open_metal_mof=True
 
+    metal_cluster_with_adsorbate=[]
+    if open_metal_mof:
+        if test['plane']:
+            v1=system.cart_coords[plane_found[0]]
+            v2=system.cart_coords[plane_found[1]]
+            v3=system.cart_coords[plane_found[2]]
+            v4=system.cart_coords[plane_found[3]]
+        elif test['non_TD']:
+            v1=system.cart_coords[1]
+            v2=system.cart_coords[2]
+            v3=system.cart_coords[3]
+            v4=system.cart_coords[4]
+            metal_cluster_with_adsorbate=add_co2(v1,v2,v3,v4,system)
+    return open_metal_mof,test,metal_cluster_with_adsorbate
+    
+def add_co2(v1,v2,v3,v4,system):
+    ads_dist=2.2
+    p1=calc_plane(v1,v2,v3)
+    p2=calc_plane(v2,v3,v4)
+    p_avg_up=[ads_dist*(p_1+p_2)/2 for p_1,p_2 in zip(p1,p2)]
+    p_avg_down=[-p for p in p_avg_up]
+    p_avg_up=p_avg_up+system.cart_coords[0] 
+    p_avg_down=p_avg_down+system.cart_coords[0] 
+    p_avg_up_f=system.lattice.get_fractional_coords(p_avg_up)
+    p_avg_down_f=system.lattice.get_fractional_coords(p_avg_down)
+    dist_up=min(system.lattice.get_all_distances(p_avg_up_f,system.frac_coords)[0])
+    dist_down=min(system.lattice.get_all_distances(p_avg_down_f,system.frac_coords)[0])
+    if dist_up < dist_down:
+        p_avg_f=p_avg_down_f
+        direction=-1
+    else:
+        p_avg_f=p_avg_up_f
+        direction=1
+    co2_vector_C=[direction*(ads_dist+1.16)*(p_1+p_2)/2 for p_1,p_2 in zip(p1,p2)]+system.cart_coords[0] 
+    co2_vector_O=[direction*(ads_dist+2*1.16)*(p_1+p_2)/2 for p_1,p_2 in zip(p1,p2)]+system.cart_coords[0] 
+    co2_vector_C_f=system.lattice.get_fractional_coords(co2_vector_C)
+    co2_vector_O_f=system.lattice.get_fractional_coords(co2_vector_O)
+
+    adsorption_site=[]
+    adsorption_pos=[]
+    #for e,c in zip(system.species,system.frac_coords):
+    #    adsorption_site.append(e)
+    #    adsorption_pos.append(c)
+    adsorption_site.append('O')
+    adsorption_pos.append(p_avg_f)
+    adsorption_site.append('C')
+    adsorption_pos.append(co2_vector_C_f)
+    adsorption_site.append('O')
+    adsorption_pos.append(co2_vector_O_f)
+    
+    return Structure(system.lattice,adsorption_site,adsorption_pos)
+
+    
+
+
+def calc_plane(x, y, z):
+    v1 = [y[0] - x[0], y[1] - x[1], y[2] - x[2]]
+    v2 = [z[0] - x[0], z[1] - x[1], z[2] - x[2]]
+    cross_product = [v1[1]*v2[2]-v1[2]*v2[1], v1[2] * v2[0] - v1[0] * v2[2], v1[0] * v2[1] - v1[1] * v2[0]]
+    d = cross_product[0] * x[0] - cross_product[1] * x[1] + cross_product[2] * x[2]
+    a = cross_product[0]
+    b = cross_product[1]
+    c = cross_product[2]
+    plane_v=[a,b,c]
+    plane_v_norm = plane_v/np.linalg.norm(plane_v)
+    return plane_v_norm
 
 def check_if_plane_on_metal(m_i,indeces,system):
     crit=180
@@ -473,6 +570,18 @@ def find_adsorption_site(system):
     return metal_cluster_with_adsorbate
 
 
+def merge_structures(s1,s2):
+    sites=[]
+    posistions=[]
+    for e,c in zip(s1.species,s1.frac_coords):
+        sites.append(e)
+        posistions.append(c)
+    for e,c in zip(s2.species,s2.frac_coords):
+        sites.append(e)
+        posistions.append(c)
+    if s1.lattice != s2.lattice:
+        sys.exit('Trying to merger two structures with different lattices')
+    return Structure(s1.lattice,sites,posistions)
 
 def get_sum_of_cov_radii(ele1,ele2):
     return atom.get_covelent_radius(ele1)+atom.get_covelent_radius(ele2)
