@@ -13,12 +13,14 @@ del path
 from xyz_read import xyz_file
 from pymatgen import Lattice,Structure
 from pymatgen.io.cifio import CifParser
+from pymatgen.io.cifio import CifWriter
 import numpy as np
 import shlex
 import shutil
 import time
 import math
 import random
+import pymatgen.io.smartio as sio
 from atomic_parameters import atoms
 
 atom=atoms()
@@ -97,7 +99,8 @@ def analyze_structure(filename,uc_params):
         summary_mofs.close()
         return
     first_coordination_structure,first_coordnation_structure_each_metal=find_first_coordination_sphere(metal,system)
-    m_sa_frac,m_surface_area=0.0,0.0 #get_metal_surface_areas(metal,system)
+    m_sa_frac,m_surface_area=0.0,0.0 
+    m_sa_frac,m_surface_area=get_metal_surface_areas(metal,system)
 
     open_metal_site=False
     problematic_structure=False
@@ -112,8 +115,12 @@ def analyze_structure(filename,uc_params):
             print len(ads)
             if len(ads)>0:
                 mof_with_co2=merge_structures(ads,system)
-                xyz_op_with_adsorbate=xyz_file()
-                xyz_op_with_adsorbate.make_xyz(output_folder+'/'+mof_name+'_first_coordination_sphere_with_ads'+str(count_omsites)+'.xyz',mof_with_co2.cart_coords,mof_with_co2.species)
+                cif=CifWriter(ads)
+                cif.write_file(output_folder+'/'+mof_name+'_ads'+str(count_omsites)+'.cif')
+                cif=CifWriter(mof_with_co2)
+                cif.write_file(output_folder+'/'+mof_name+'_first_coordination_sphere_with_ads'+str(count_omsites)+'.cif')
+                #xyz_op_with_adsorbate=xyz_file()
+                #xyz_op_with_adsorbate.make_xyz(output_folder+'/'+mof_name+'_first_coordination_sphere_with_ads'+str(count_omsites)+'.xyz',mof_with_co2.cart_coords,mof_with_co2.species)
 
           #  op_with_adsorbate=find_adsorption_site(open_metal_candidate)
 
@@ -339,7 +346,7 @@ def check_metal_dihedrals(system,test):
         v3=system.cart_coords[2]
         v4=system.cart_coords[3]
             
-    metal_cluster_with_adsorbate=add_co2(v1,v2,v3,v4,system)
+        metal_cluster_with_adsorbate=add_co2(v1,v2,v3,v4,system)
     return open_metal_mof,test,metal_cluster_with_adsorbate
 
 def check_non_metal_dihedrals(system,test):
@@ -399,6 +406,7 @@ def check_non_metal_dihedrals(system,test):
                                         else:
                                             check=True
                                 if check:
+                                    plane_found=[i,j,k,l]
                                     test[om_type]=True
                                     open_metal_mof=True
 
@@ -406,20 +414,32 @@ def check_non_metal_dihedrals(system,test):
                             if test_type == 'tetrahedron':
                                 test[om_type]=True
                                 open_metal_mof=True
+                                indeces=[i,j,k,l]
+                                n=4
+                                for ii in range(0,n-2):
+                                    for jj in range(ii+1,n-1):
+                                        for kk in range(jj+1,n):
+                                            iii=indeces[ii]
+                                            jjj=indeces[jj]
+                                            kkk=indeces[kk]
+                                            dihedral=abs(system.get_dihedral(0,iii,jjj,kkk))
+                                            if abs(dihedral-180)< 10 or abs(dihedral) < tol[test_type]:
+                                                plane_found=[0,iii,jjj,kkk]
+                                                
 
     metal_cluster_with_adsorbate=[]
     if open_metal_mof:
-        if test['plane']:
-            v1=system.cart_coords[plane_found[0]]
-            v2=system.cart_coords[plane_found[1]]
-            v3=system.cart_coords[plane_found[2]]
-            v4=system.cart_coords[plane_found[3]]
-        elif test['non_TD']:
-            v1=system.cart_coords[1]
-            v2=system.cart_coords[2]
-            v3=system.cart_coords[3]
-            v4=system.cart_coords[4]
-            metal_cluster_with_adsorbate=add_co2(v1,v2,v3,v4,system)
+        #if test['plane']:
+        v1=system.cart_coords[plane_found[0]]
+        v2=system.cart_coords[plane_found[1]]
+        v3=system.cart_coords[plane_found[2]]
+        v4=system.cart_coords[plane_found[3]]
+        #elif test['non_TD']:
+        #    v1=system.cart_coords[1]
+        #    v2=system.cart_coords[2]
+        #    v3=system.cart_coords[3]
+        #    v4=system.cart_coords[4]
+        metal_cluster_with_adsorbate=add_co2(v1,v2,v3,v4,system)
     return open_metal_mof,test,metal_cluster_with_adsorbate
     
 def add_co2(v1,v2,v3,v4,system):
@@ -620,7 +640,8 @@ def get_metal_surface_area(fcenter,metal_element,system):
         pos_f=system.lattice.get_fractional_coords(pos)
         if not check_for_overalp(center,pos_f,system,vdw_probe):
             count+=1
-    #raw_input()
+    print count
+    raw_input()
     sa_frac=float(count)/float(mc_tries) #metal_full_surface_area
     sa=metal_full_surface_area*sa_frac
     return sa_frac,sa
@@ -631,6 +652,8 @@ def check_for_overalp(center,pos,system,r_probe):
     distances=system.lattice.get_all_distances(pos,system.frac_coords)
     for i,dist in enumerate(distances[0]):
         #if not check_if_center(center,system.cart_coords[i],system):
+        print dist-lr_probe+atom.get_vdf_radius(str(system.species[i]))
+        raw_input()
         if (dist - (r_probe+atom.get_vdf_radius(str(system.species[i]))) ) < -1e-4:
             return True
     return False
