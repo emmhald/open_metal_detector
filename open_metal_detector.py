@@ -361,7 +361,7 @@ def check_if_open(system):
         open_metal_mof,test,ads=check_metal_dihedrals(system,test)
     
     print num-1,open_metal_mof,tf
-    raw_input()
+    #raw_input()
     return open_metal_mof,problematic,test,ads,tf,min_dihid,all_dihidrals
 
 def get_t_factor(system):
