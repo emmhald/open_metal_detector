@@ -244,7 +244,7 @@ def find_first_coordination_sphere(metal,structure_full):
         dist=metal.lattice.get_all_distances(m_f_coor,structure.frac_coords)
         min_dist=min(dist[0])
 
-        increase=1.0
+        increase=1.3
         while True:
             bonds_found=0
             first_coordnation_list_species=[]
@@ -255,11 +255,18 @@ def find_first_coordination_sphere(metal,structure_full):
                     first_coordnation_list_species.append(structure.species[i])
                     first_coordnation_list_coords.append(structure.frac_coords[i])
                     bonds_found+=1
-            if check_if_enough_bonds(bonds_found,increase,str(metal.species[m])):
+            #if check_if_enough_bonds(bonds_found,increase,str(metal.species[m])):
+            check_structure=Structure(metal.lattice,first_coordnation_list_species,first_coordnation_list_coords)
+            #print increase,bond_tol,bonds_found
+            if check_if_valid_bonds(check_structure,bond_tol,increase):
                 break
             else:
-                increase+=0.1
+                increase-=0.1
+                if increase < 0 :
+                    print 'something went terribly wrong'
+                    raw_input()
                 print 'Increasing bond_tolerance by ',increase
+                
         for cls,clc in zip(first_coordnation_list_species,first_coordnation_list_coords):
             first_coordnation_structure_each_metal[m].append(cls,clc)
             first_coordination_structure.append(cls,clc)
@@ -275,6 +282,20 @@ def check_if_enough_bonds(bonds_found,increase,metal):
         return False
     else:
         return True
+
+def check_if_valid_bonds(ligands,bond_tol,increase):
+    if increase >0.05:
+        for l,fc in enumerate(ligands.frac_coords):
+            dist=ligands.lattice.get_all_distances(fc,ligands.frac_coords)
+            count_bonds=0
+            for i,dis in enumerate(dist[0]):
+                if i != l:
+                    if bond_check(str(ligands.species[l]),str(ligands.species[i]),dis,bond_tol):
+                        count_bonds+=1
+            if count_bonds > 0:
+                return False
+    return True
+    
 
 def make_system_from_cif(ciffile):
     cif=CifParser(ciffile)
@@ -354,7 +375,7 @@ def check_if_open(system):
             v3=[0,0,0]
             v4=[0,0,0]
         ads=add_co2(v1,v2,v3,v4,system)
-        return open_metal_mof,problematic,test,ads,tf,0.0
+        return open_metal_mof,problematic,test,ads,tf,0.0,0.0
     ads=[]
     open_metal_mof,test,ads,min_dihid,all_dihidrals=check_non_metal_dihedrals(system,test)
     if num-1 == 5 and not open_metal_mof:
