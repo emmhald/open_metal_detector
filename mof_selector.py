@@ -19,11 +19,14 @@ import shutil
 from atomic_parameters import atoms
 import matplotlib.pyplot as plt
 import numpy as np
+import json
+import re
 
 
 def main():
     #analyse_results('Fe')
-    analyze_for_td()
+#    analyze_for_td()
+    analyze_for_td_using_json()
 #    for m in atoms().metals:
 #        analyse_results(m)
 #        analyse_results('U')
@@ -32,6 +35,91 @@ def main():
     #make_plot()
     #analyse_results_sa()
 
+def read_json(filename):
+
+    try:
+        json_filename=filename.split('.')[0]+'.JSON'
+        json_dict=json.load(open(json_filename))
+    except:
+        json_filename=filename.split('.')[0]+'.json'
+        json_dict=json.load(open(json_filename))      
+    return json_dict
+
+def analyze_for_td_using_json():
+    output_folder="output"
+    td_analysis_folder='analysis/td_analysis'
+    make_folder('analysis')
+    make_folder('analysis')
+    
+#    td_analysis_folder='analysis/td_analysis_redo_all'
+#    td_analysis_folder='analysis/td_analysis_t5'
+    yes_4= open(td_analysis_folder+'/yes_4.out','w')
+    no_4= open(td_analysis_folder+'/no_4.out','w')
+    yes_5= open(td_analysis_folder+'/yes_5.out','w')
+    no_5= open(td_analysis_folder+'/no_5.out','w')
+    yes_6= open(td_analysis_folder+'/yes_6.out','w')
+    no_6= open(td_analysis_folder+'/no_6.out','w')
+    #r = re.compile("([a-zA-Z]+)(-?(?:\d+())?(?:\.\d*())?(?:e-?\d+())?(?:\2|\1\3))")
+    
+#    with open(output_folder+'/summary.out','r') as summary: 
+    yes_or_no=dict()
+    yes_or_no[True]='yes'
+    yes_or_no[False]='no'
+    with open('parameters_'+'cif'+'.txt','r') as parameters:
+        for l in parameters:
+            struc=l.split('.')[0]
+            print struc
+            json_dict=read_json(output_folder+'/'+struc+'/'+struc)
+            num_of_ligands=fetch_num_of_ligands(json_dict)
+            om_type=fetch_if_open(json_dict)
+            tfactors=fetch_t_factor(json_dict)
+            for L,typ,tf in zip(num_of_ligands,om_type,tfactors):
+                if int(L) > 3 and int(L) < 7:
+                    outfile=yes_or_no[typ]+'_'+str(L)
+                    print outfile,struc,yes_or_no[typ],tf
+                    print>>eval(outfile),struc,yes_or_no[typ],tf
+
+    print 'okay'
+    yes_no_list=['yes','no']
+    for yn in yes_no_list:
+        for i in range(4,7):
+            outfile=yn+'_'+str(i)
+            eval(outfile).close()
+            datafile=open(td_analysis_folder+'/'+outfile+'.out','r')
+            td_list=[]
+            for l in datafile:
+                td=l.split(' ')[2].rstrip('\n')
+                td_list.append(float(td))
+            eval(outfile).close()
+            print yn,i
+            if len(td_list) > 0:
+                hist, edges = np.histogram(td_list,bins=40,range=(0,1),density=True)
+                hist_file=open(td_analysis_folder+'/'+outfile+'_hist.out','w')
+                w=(edges[1]-edges[0])/2
+                for e,h in zip(edges,hist):
+                    print>>hist_file,e+w,h
+                
+                
+                
+def fetch_num_of_ligands(json_dict):
+    num_of_ligands=[]
+    for ms in json_dict["metal_sites"]:
+        num_of_ligands.append(ms["number_of_linkers"])
+    return num_of_ligands
+  
+def fetch_if_open(json_dict):
+    om_type=[]
+    for ms in json_dict["metal_sites"]:
+        om_type.append(ms["is_open"])
+    return om_type  
+    
+def  fetch_t_factor(json_dict):
+    t_factor=[]
+    for ms in json_dict["metal_sites"]:
+        t_factor.append(ms["t_factor"])
+    return t_factor      
+    
+    
 def analyze_for_td():
     td_analysis_folder='analysis/td_analysis_with_angles'
     td_analysis_folder='analysis/td_analysis_redo_all'
@@ -95,10 +183,6 @@ def analyze_for_td():
             w=(edges[1]-edges[0])/2
             for e,h in zip(edges,hist):
                 print>>hist_file,e+w,h
-
-
-#    outfile=yes_or_no+'_'+str(L)
-#    data_file=open(outfile,r)
 
 
 def make_plot():
@@ -254,6 +338,11 @@ def analyse_results(element):
     print count,' MOFs with ',element,' open metal sites were found'
     print>>summary, count,' MOFs with ',element,' open metal sites were found'
 
+
+
+def make_folder(folder):
+    if not os.path.exists(folder):
+        os.makedirs(folder)
 
 if __name__=='__main__':
     main()
