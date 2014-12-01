@@ -28,21 +28,21 @@ def main():
 #        analyse_results(m)
 #        analyse_results('U')
     #    print m
-#    
+#
     #make_plot()
     #analyse_results_sa()
 
 def analyze_for_td():
     td_analysis_folder='analysis/td_analysis_with_angles'
     td_analysis_folder='analysis/td_analysis_redo_all'
-    td_analysis_folder='analysis/td_analysis_t5'    
-    
-    
+    td_analysis_folder='analysis/td_analysis_t5'
+
+
     summary= open('output/summary.out','r') #new_tol_first\
     summary= open('output/summary.out_first','r') ;filetype=1 #new_tol_first\
     summary= open('output/summary.out_5t','r') ;filetype=2 #new_tol_first\
-    
-    
+
+
     yes_4= open(td_analysis_folder+'/yes_4.out','w')
     no_4= open(td_analysis_folder+'/no_4.out','w')
     yes_5= open(td_analysis_folder+'/yes_5.out','w')
@@ -72,7 +72,7 @@ def analyze_for_td():
         #            print yes_or_no
         #            raw_input()
                 if int(L) > 3 and int(L) < 7:
-                    outfile=yes_or_no+'_'+str(L)    
+                    outfile=yes_or_no+'_'+str(L)
                     print outfile,struc,om.lstrip().split(',')[-1]
                     if filetype==2:
                         print>>eval(outfile),struc,om.lstrip().split(',')[-1],om.lstrip().split(',')[-2]
@@ -82,7 +82,7 @@ def analyze_for_td():
     yes_no_list=['yes','no']
     for yn in yes_no_list:
         for i in range(4,7):
-            outfile=yn+'_'+str(i) 
+            outfile=yn+'_'+str(i)
             eval(outfile).close()
             datafile=open(td_analysis_folder+'/'+outfile+'.out','r')
             td_list=[]
@@ -95,15 +95,15 @@ def analyze_for_td():
             w=(edges[1]-edges[0])/2
             for e,h in zip(edges,hist):
                 print>>hist_file,e+w,h
-            
-    
+
+
 #    outfile=yes_or_no+'_'+str(L)
 #    data_file=open(outfile,r)
 
 
 def make_plot():
     summary= open('summary.out','r')
-    
+
     frequency1=[]
     elements1=[]
     frequency2=[]
@@ -124,7 +124,7 @@ def make_plot():
     barPlot(elements1,frequency1,1)
     barPlot(elements2,frequency2,2)
     plt.show()
-    
+
 def barPlot(elements,frequency,fig):
     ind = np.arange(len(frequency))
     width = 0.5
@@ -133,7 +133,7 @@ def barPlot(elements,frequency,fig):
     ax.set_xticks(ind+width)
     ax.set_xticklabels( elements )
     ax.bar(ind , frequency, width=width)
-    
+
 
 def analyse_results_sa():
     nbin=50
@@ -166,7 +166,7 @@ def analyse_results_sa():
         print i,b
     raw_input()
     #print len(sa_o_hist[0]),len(ind)
-    
+
     width = 0.5
     ind_shift=[l+width for l in ind]
     #plt.bar(ind_shift, sa_hist[0],color='blue',width=width)
@@ -184,7 +184,7 @@ def analyse_results(element):
         os.makedirs(cif_folder_out)
     cif_folder='output_all/open_metal_mofs/'
     #cif_folder='../detect_open_metal_sites/July_2014_runs/output_all/open_metal_mofs/'
-    
+
     filetype='cif'
     #params_file= open('../detect_open_metal_sites/July_2014_runs/output_all/open_metal_mofs.out','r')
     params_file= open('output_all/open_metal_mofs.out','r')
@@ -193,7 +193,7 @@ def analyse_results(element):
     parameters= open(folder+'/parameters_'+element+'.txt','w')
     summary= open('summary.out','a')
     summary_ele= open(folder+'/summary.out','w')
-    
+
     count=0
     for line in summary_file:
         if 'yes' in line:
@@ -233,7 +233,7 @@ def analyse_results(element):
                             print 'Cannot read ads cif file'
                             continue
                         shutil.copyfile(ads_path, folder+'/'+struc+'/'+ads_file)
-    
+
                         dynamics=[]
                         for atom in range(0,system_ads.num_sites):
                             dynamics.append([True,True,True])
@@ -244,20 +244,20 @@ def analyse_results(element):
                                 dist=system.lattice.get_all_distances(c,cs)
                                 if es == e and dist < 0.5:
                                     dynamics[i]=([False,False,False])
-                                    
+
                         #for atom1 in range(0,system_ads[0].num_sites):
                         #    for atom2 in range(0,system[0].num_sites):
                         #        system.lattice.get_all_distances(m_f_coor,structure.frac_coords)
                         pos=vasp.Poscar(system_ads,selective_dynamics =dynamics)
                         pos.write_file(folder+'/'+struc+'/POSCAR_'+ads_file)
-                
+
     print count,' MOFs with ',element,' open metal sites were found'
     print>>summary, count,' MOFs with ',element,' open metal sites were found'
-    
-    
+
+
 if __name__=='__main__':
-    main()    
-    
+    main()
+
 '''
 for line in params_file:
     struc=line.split(' ')[0]
