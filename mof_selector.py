@@ -42,7 +42,7 @@ def read_json(filename):
         json_dict=json.load(open(json_filename))
     except:
         json_filename=filename.split('.')[0]+'.json'
-        json_dict=json.load(open(json_filename))      
+        json_dict=json.load(open(json_filename))
     return json_dict
 
 def analyze_for_td_using_json():
@@ -50,7 +50,7 @@ def analyze_for_td_using_json():
     td_analysis_folder='analysis/td_analysis'
     make_folder('analysis')
     make_folder('analysis')
-    
+
 #    td_analysis_folder='analysis/td_analysis_redo_all'
 #    td_analysis_folder='analysis/td_analysis_t5'
     yes_4= open(td_analysis_folder+'/yes_4.out','w')
@@ -60,8 +60,8 @@ def analyze_for_td_using_json():
     yes_6= open(td_analysis_folder+'/yes_6.out','w')
     no_6= open(td_analysis_folder+'/no_6.out','w')
     #r = re.compile("([a-zA-Z]+)(-?(?:\d+())?(?:\.\d*())?(?:e-?\d+())?(?:\2|\1\3))")
-    
-#    with open(output_folder+'/summary.out','r') as summary: 
+
+#    with open(output_folder+'/summary.out','r') as summary:
     yes_or_no=dict()
     yes_or_no[True]='yes'
     yes_or_no[False]='no'
@@ -98,28 +98,28 @@ def analyze_for_td_using_json():
                 w=(edges[1]-edges[0])/2
                 for e,h in zip(edges,hist):
                     print>>hist_file,e+w,h
-                
-                
-                
+
+
+
 def fetch_num_of_ligands(json_dict):
     num_of_ligands=[]
     for ms in json_dict["metal_sites"]:
         num_of_ligands.append(ms["number_of_linkers"])
     return num_of_ligands
-  
+
 def fetch_if_open(json_dict):
     om_type=[]
     for ms in json_dict["metal_sites"]:
         om_type.append(ms["is_open"])
-    return om_type  
-    
+    return om_type
+
 def  fetch_t_factor(json_dict):
     t_factor=[]
     for ms in json_dict["metal_sites"]:
         t_factor.append(ms["t_factor"])
-    return t_factor      
-    
-    
+    return t_factor
+
+
 def analyze_for_td():
     td_analysis_folder='analysis/td_analysis_with_angles'
     td_analysis_folder='analysis/td_analysis_redo_all'

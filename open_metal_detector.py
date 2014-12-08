@@ -24,39 +24,58 @@ import random
 import pymatgen.io.smartio as sio
 from atomic_parameters import atoms
 import json
+import argparse
 
 atom=atoms()
 target_folder='CORE-MOF-DB-June2014/'
 filetype='cif'
-number_of_structures=5100
+number_of_structures=20
 def main():
-    t0 = time.time()
-    params_file= open('parameters_'+filetype+'.txt','r')
-    count=1
-    clear_files()
-    for struc in params_file:
-        t0s = time.time()
-        count+=1
-        uc_params=[]
-        line_elements=shlex.split(struc)
-        filename=line_elements[0]
-        if filetype=='xyz':
-            for j in range(1,7):
-                uc_params.append(float(line_elements[j]))
-        analyze_structure(filename,uc_params)
-        t1s = time.time()
-        print 'Time:',t1s-t0s
-        if count >number_of_structures:
-            break
-    params_file.close()
-    t1 = time.time()
-    print 'Total Time',t1-t0
+    global filetype
 
-def clear_files():
+    parser = argparse.ArgumentParser(description='Split file into batches')
+    parser.add_argument('-p','--parameter_file', nargs='?',help='Name of parameters file')
+    parser.add_argument('-s','--summary_file', nargs='?',help='Name of summary file')
+    parser.add_argument('--continue_run', dest='continue_run', action='store_true')
+    parser.set_defaults(continue_run=False)
+
+    args=parser.parse_args()
+    cont=args.continue_run
+    params_filename='parameters_'+filetype+'.txt'
+    if args.parameter_file:
+        params_filename=args.parameter_file
+
+    sfile='summary.out'
+    if args.summary_file:
+        sfile=args.summary_file
+    t0 = time.time()
+    with open(params_filename,'r') as params_file:
+        if not cont:
+            clear_files(sfile,cont)
+        for i,struc in enumerate(params_file):
+            t0s = time.time()
+            uc_params=[]
+            line_elements=shlex.split(struc)
+            filename=line_elements[0]
+            if filetype=='xyz':
+                for j in range(1,7):
+                    uc_params.append(float(line_elements[j]))
+            analyze_structure(filename,uc_params,sfile,cont)
+            t1s = time.time()
+            print 'Time:',t1s-t0s
+            if i+1 >= number_of_structures:
+                break
+        params_file.close()
+        t1 = time.time()
+        print 'Total Time',t1-t0
+
+
+def clear_files(sfile,cont):
     make_folder('output')
-    open_metal_mofs= open('output/open_metal_mofs.out','w')
-    problematic_mofs= open('output/problematic.out','w')
-    summary_mofs= open('output/summary.out','w')
+    file_type='w'
+    open_metal_mofs= open('output/open_metal_mofs.out',file_type)
+    problematic_mofs= open('output/problematic.out',file_type)
+    summary_mofs= open('output/'+sfile,file_type)
     open_metal_mofs.close()
     problematic_mofs.close()
     summary_mofs.close()
@@ -65,18 +84,22 @@ def make_folder(folder):
     if not os.path.exists(folder):
         os.makedirs(folder)
 
-def analyze_structure(filename,uc_params):
+def analyze_structure(filename,uc_params,sfile,cont):
+    global target_folder
 
     mof_name=filename.split('.')[0]
     output_folder='output/'+mof_name
-
+    json_file_out=output_folder+'/'+mof_name+'.json'
+    if cont and os.path.exists(json_file_out):
+        print mof_name,'has run already... skipping'
+        return
     make_folder(output_folder)
     make_folder('output/open_metal_mofs')
     make_folder('output/problematic_metal_mofs')
 
     open_metal_mofs= open('output/open_metal_mofs.out','a')
     problematic_mofs= open('output/problematic.out','a')
-    summary_mofs= open('output/summary.out','a')
+    summary_mofs= open('output/'+sfile,'a')
 
     if filetype=='xyz':
         print 'Reading Xyzs'
@@ -101,7 +124,7 @@ def analyze_structure(filename,uc_params):
         summary_mofs.close()
         return
     first_coordination_structure,first_coordnation_structure_each_metal=find_first_coordination_sphere(metal,system)
-    m_sa_frac,m_surface_area=0.0,0.0 
+    m_sa_frac,m_surface_area=0.0,0.0
     #m_sa_frac,m_surface_areaget_metal_surface_areas(metal,system)
 
     open_metal_site=False
@@ -114,7 +137,7 @@ def analyze_structure(filename,uc_params):
     output_json['uc_volume']=system.volume
     output_json['metal_sites_found']=False
     output_json['metal_sites']=list()
-    
+
     summary=str(m_sa_frac)+' '+str(m_surface_area)+' '
     summary=summary+' '+'no'
     count_omsites=0
@@ -123,12 +146,12 @@ def analyze_structure(filename,uc_params):
         op,pr,t,ads,tf,min_dih,all_dih=check_if_open(open_metal_candidate)
         site_dict["is_open"]=op
         site_dict["t_factor"]=tf
-        site_dict["metal"]=str(open_metal_candidate.species[0])            
+        site_dict["metal"]=str(open_metal_candidate.species[0])
         site_dict["type"]='closed'
         site_dict["number_of_linkers"]=open_metal_candidate.num_sites-1
         site_dict["min_dihedral"]=min_dih
         site_dict["all_dihedrals"]=all_dih
-        
+
         site_dict["unique"]=False
         if op:
             count_omsites+=1
@@ -174,7 +197,7 @@ def analyze_structure(filename,uc_params):
         output_json['metal_sites'].append(site_dict)
     summary=mof_name+' '+str(count_omsites)+' '+str(count_omsites/system.volume)+' '+summary
     summary=write_summary(output_json)
-    
+
     if open_metal_site:
         print>>open_metal_mofs,summary
         shutil.copyfile(target_folder+filename, 'output/open_metal_mofs/'+filename)
@@ -189,8 +212,6 @@ def analyze_structure(filename,uc_params):
         print>>problematic_mofs,mof_name
         shutil.copyfile(target_folder+filename, 'output/problematic_metal_mofs/'+filename)
 
-    with open(output_folder+'/'+mof_name+'.JSON', 'w') as outfile:
-        json.dump(output_json, outfile,indent=3)
 
     write_xyz_file(output_folder+'/'+mof_name+'_metal.xyz',metal)
     write_xyz_file(output_folder+'/'+mof_name+'_organic.xyz',organic)
@@ -201,6 +222,8 @@ def analyze_structure(filename,uc_params):
     open_metal_mofs.close()
     summary_mofs.close()
     problematic_mofs.close()
+    with open(json_file_out, 'w') as outfile:
+        json.dump(output_json, outfile,indent=3)
 
 
 def write_summary(output_json):
@@ -218,9 +241,9 @@ def write_summary(output_json):
     open_metal_str='no'
     if output_json['metal_sites_found']:
         open_metal_str='yes'
-    return output_json['material_name']+str(counter_om)+str(output_json['open_metal_density'])+str(output_json['max_surface_area_frac'])+str(output_json['max_surface_area'])+open_metal_str+om_details
-    
-    
+    return output_json['material_name']+' '+str(counter_om)+' '+str(output_json['open_metal_density'])+' '+str(output_json['max_surface_area_frac'])+' '+str(output_json['max_surface_area'])+' '+open_metal_str+' '+om_details
+
+
 def write_xyz_file(filename,system):
     xyz=xyz_file()
     xyz.make_xyz(filename,system.cart_coords,system.species)
@@ -266,7 +289,7 @@ def find_first_coordination_sphere(metal,structure_full):
                     print 'something went terribly wrong'
                     raw_input()
                 print 'Increasing bond_tolerance by ',increase
-                
+
         for cls,clc in zip(first_coordnation_list_species,first_coordnation_list_coords):
             first_coordnation_structure_each_metal[m].append(cls,clc)
             first_coordination_structure.append(cls,clc)
@@ -295,7 +318,7 @@ def check_if_valid_bonds(ligands,bond_tol,increase):
             if count_bonds > 0:
                 return False
     return True
-    
+
 
 def make_system_from_cif(ciffile):
     cif=CifParser(ciffile)
@@ -341,7 +364,7 @@ def check_if_6_or_more(system):
 def check_if_open(system):
 #def check_if_pyramidal_square(system):
     tf=get_t_factor(system)
-   
+
     problematic=False
     test=dict()
     test['plane']=False
@@ -354,8 +377,8 @@ def check_if_open(system):
     dihedral_tolerance=5
     num=system.num_sites
     max_cordination=3
-    
-    
+
+
     #if num-1 ==4:
     #    print 'tfactor',tf
     if atom.is_lanthanide_or_actinide(str(system.species[0])):
@@ -380,7 +403,7 @@ def check_if_open(system):
     open_metal_mof,test,ads,min_dihid,all_dihidrals=check_non_metal_dihedrals(system,test)
     if num-1 == 5 and not open_metal_mof:
         open_metal_mof,test,ads=check_metal_dihedrals(system,test)
-    
+
     print num-1,open_metal_mof,tf
     #raw_input()
     return open_metal_mof,problematic,test,ads,tf,min_dihid,all_dihidrals
@@ -392,15 +415,15 @@ def get_t_factor(system):
     for i in range(1,num-1):
         for j in range(i+1,num):
             angles.append(system.get_angle(i,0,j))
-            if max_angle < angles[-1]:             
+            if max_angle < angles[-1]:
                 max_index=i
                 max_angle=angles[-1]
             #print i,j,angles[-1]
-             
+
     angles.sort()
     if num-1>3 and num-1<6:
-        beta=angles[-1] 
-        alpha=angles[-2]    
+        beta=angles[-1]
+        alpha=angles[-2]
         gamma=angles[0]
     elif num-1 ==6:
         angles_max=[]
@@ -408,10 +431,10 @@ def get_t_factor(system):
             if j != max_index:
                 angles_max.append(system.get_angle(max_index,0,j))
         angles_max.sort()
-        beta=angles_max[-2] 
-        alpha=angles_max[-1]    
+        beta=angles_max[-2]
+        alpha=angles_max[-1]
         gamma=angles_max[0]
-        
+
     if num-1==6:
         tau=get_t6_factor(alpha,beta,gamma)
     elif num-1==5:
@@ -423,11 +446,11 @@ def get_t_factor(system):
     return tau
 
 def get_t4_factor(a,b):
-    return (360-(a+b))/141.0    
+    return (360-(a+b))/141.0
 
 def get_t5_factor(a,b):
     return (b-a)/60.0
-    
+
 def get_t6_factor(a,b,c):
 #    return 1.0-(a-c)/120
     print 'abc',a,b,c
@@ -564,7 +587,7 @@ def check_non_metal_dihedrals(system,test):
                                             if abs(dihedral-180)< 10 or abs(dihedral) < tol[test_type]:
                                                 plane_found=[0,iii,jjj,kkk]
     #if num-1 ==4:
-    #    print 'min_dihedral:',min_dihedral,open_metal_mof                                   
+    #    print 'min_dihedral:',min_dihedral,open_metal_mof
     metal_cluster_with_adsorbate=[]
     if open_metal_mof:
         #if test['plane']:
@@ -579,15 +602,15 @@ def check_non_metal_dihedrals(system,test):
         #    v4=system.cart_coords[4]
         metal_cluster_with_adsorbate=add_co2(v1,v2,v3,v4,system)
     return open_metal_mof,test,metal_cluster_with_adsorbate,min_dihedral,all_dihedrals
-    
+
 def add_co2(v1,v2,v3,v4,system):
     ads_dist=2.2
     p1=calc_plane(v1,v2,v3)
     p2=calc_plane(v2,v3,v4)
     p_avg_up=[ads_dist*(p_1+p_2)/2 for p_1,p_2 in zip(p1,p2)]
     p_avg_down=[-p for p in p_avg_up]
-    p_avg_up=p_avg_up+system.cart_coords[0] 
-    p_avg_down=p_avg_down+system.cart_coords[0] 
+    p_avg_up=p_avg_up+system.cart_coords[0]
+    p_avg_down=p_avg_down+system.cart_coords[0]
     p_avg_up_f=system.lattice.get_fractional_coords(p_avg_up)
     p_avg_down_f=system.lattice.get_fractional_coords(p_avg_down)
     dist_up=min(system.lattice.get_all_distances(p_avg_up_f,system.frac_coords)[0])
@@ -598,8 +621,8 @@ def add_co2(v1,v2,v3,v4,system):
     else:
         p_avg_f=p_avg_up_f
         direction=1
-    co2_vector_C=[direction*(ads_dist+1.16)*(p_1+p_2)/2 for p_1,p_2 in zip(p1,p2)]+system.cart_coords[0] 
-    co2_vector_O=[direction*(ads_dist+2*1.16)*(p_1+p_2)/2 for p_1,p_2 in zip(p1,p2)]+system.cart_coords[0] 
+    co2_vector_C=[direction*(ads_dist+1.16)*(p_1+p_2)/2 for p_1,p_2 in zip(p1,p2)]+system.cart_coords[0]
+    co2_vector_O=[direction*(ads_dist+2*1.16)*(p_1+p_2)/2 for p_1,p_2 in zip(p1,p2)]+system.cart_coords[0]
     co2_vector_C_f=system.lattice.get_fractional_coords(co2_vector_C)
     co2_vector_O_f=system.lattice.get_fractional_coords(co2_vector_O)
 
@@ -614,10 +637,10 @@ def add_co2(v1,v2,v3,v4,system):
     adsorption_pos.append(co2_vector_C_f)
     adsorption_site.append('O')
     adsorption_pos.append(co2_vector_O_f)
-    
+
     return Structure(system.lattice,adsorption_site,adsorption_pos)
 
-    
+
 
 
 def calc_plane(x, y, z):
@@ -708,7 +731,7 @@ def find_adsorption_site(system):
     metal=str(system.species[0])
     new_position=0.0
     for i in range(0,tries):
-        probe_pos=generate_random_position(system.cart_coords[0],metal,(prob_dist)-atom.get_vdf_radius(metal)) 
+        probe_pos=generate_random_position(system.cart_coords[0],metal,(prob_dist)-atom.get_vdf_radius(metal))
         probe_pos_f=system.lattice.get_fractional_coords(probe_pos)
         sum_distance=0.0
         for e,c in zip(system.species,system.frac_coords):
