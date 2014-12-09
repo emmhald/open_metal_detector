@@ -688,7 +688,8 @@ def calc_plane(x, y, z):
 
 def check_if_plane_on_metal(m_i,indeces,system):
     crit=180
-    tol=12.5
+    #tol=12.5
+    tol=25.0
     for i in range(1,len(indeces)):
         for j in range(1,len(indeces)):
             for k in range(1,len(indeces)):
