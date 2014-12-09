@@ -29,7 +29,7 @@ import argparse
 atom=atoms()
 target_folder='CORE-MOF-DB-June2014/'
 filetype='cif'
-number_of_structures=20
+number_of_structures=1
 def main():
     global filetype
 
@@ -417,8 +417,9 @@ def get_t_factor(system):
             angles.append(system.get_angle(i,0,j))
             if max_angle < angles[-1]:
                 max_index=i
+                sec_index=j
                 max_angle=angles[-1]
-            #print i,j,angles[-1]
+#                print i,j,angles[-1]
 
     angles.sort()
     if num-1>3 and num-1<6:
@@ -426,17 +427,36 @@ def get_t_factor(system):
         alpha=angles[-2]
         gamma=angles[0]
     elif num-1 ==6:
+        print angles
         angles_max=[]
         for j in range(1,num):
             if j != max_index:
                 angles_max.append(system.get_angle(max_index,0,j))
         angles_max.sort()
+#        print angles_max
+#        print angles_max[0], angles_max[1]
         beta=angles_max[-2]
         alpha=angles_max[-1]
-        gamma=angles_max[0]
+        gamma=angles_max[2]
+#New Angles VOG
+        max_angle=0.0
+        for i in range(1,num-1):
+            for j in range(i+1,num):
+                if i!= max_index and i!= sec_index and j!= max_index and j!= sec_index:
+                    angles.append(system.get_angle(i,0,j))
+                    if max_angle < angles[-1]:
+                         thr_index=i
+                         fou_index=j
+                         max_angle=angles[-1]
+                         delta=angles[-1]
+
+        for i in range(1,num-1):
+            for j in range(i+1,num):
+                if i!= max_index and i!= sec_index and i!= thr_index and i!= fou_index and j!= max_index and j!= sec_index and j!= thr_index and j!= fou_index:
+                   epsilon=system.get_angle(i,0,j)
 
     if num-1==6:
-        tau=get_t6_factor(alpha,beta,gamma)
+        tau=get_t6_factor(alpha,beta,gamma,delta,epsilon)
     elif num-1==5:
         tau=get_t5_factor(alpha,beta)
     elif num-1==4:
@@ -451,11 +471,17 @@ def get_t4_factor(a,b):
 def get_t5_factor(a,b):
     return (b-a)/60.0
 
-def get_t6_factor(a,b,c):
+def get_t6_factor(a,b,c,d,e):
 #    return 1.0-(a-c)/120
-    print 'abc',a,b,c
-    print abs(a-b),abs(a-c)
-    return (abs(90.0-(a-b))/180.0)+(abs(90.0-(a-c))/90.0)
+    print 'abcde',a,b,c,d,e
+#    print (abs(90.0-(a-b))/180.0)
+#    print (abs(90.0-(a-c))/90.0)
+#    print ((e-d)/180)
+    return (e/180)
+#    return (1-(180-e)/140 )
+#    return ((540-a-d-e)/180)
+#    return (1- (abs(90.0-(a-b))/180.0) - (abs(90.0-(a-c))/90.0) - ((e-d)/180))
+#    return (abs(90.0-(a-b))/180.0)+(abs(90.0-(a-c))/90.0)
 
 
 def check_metal_dihedrals(system,test):
@@ -464,7 +490,7 @@ def check_metal_dihedrals(system,test):
     tol=dict()
 
     crit['plane']=180
-    tol['plane']=35
+    tol['plane']=30
 
     crit['tetrahedron']=70
     tol['tetrahedron']=10
@@ -487,9 +513,13 @@ def check_metal_dihedrals(system,test):
                          if len(other_indeces) > 2:
                              print 'Something went terribly wrong'
                              raw_input()
-                         dihedral_other1=abs(system.get_dihedral(other_indeces[0],j,k,l))
-                         dihedral_other2=abs(system.get_dihedral(other_indeces[1],j,k,l))
+                         #dihedral_other1=abs(system.get_dihedral(other_indeces[0],j,k,l))
+                         #dihedral_other2=abs(system.get_dihedral(other_indeces[0],j,k,l))
+                         dihedral_other1=system.get_dihedral(other_indeces[0],j,k,l)
+                         dihedral_other2=system.get_dihedral(other_indeces[1],j,k,l)
                          if (dihedral_other1*dihedral_other2)  >= 0:
+                             print dihedral_other1,dihedral_other2
+                             raw_input()
                              open_metal_mof=True
                              test['metal_plane']=True
 
@@ -516,14 +546,16 @@ def check_non_metal_dihedrals(system,test):
     tol=dict()
     crit['plane']=180
     tol['plane']=35
+    crit['plane_5l']=180
+    tol['plane_5l']=30
     crit['tetrahedron']=70
     tol['tetrahedron']=10
     if num-1==4:
         test_type='tetrahedron'
         om_type='non_TD'
     elif num-1 == 5:
-        test_type='plane'
-        om_type='plane'
+        test_type='plane_5l'
+        om_type='plane_5l'
     elif num-1 > 5:
         test_type='plane'
         om_type='same_side'
@@ -546,7 +578,6 @@ def check_non_metal_dihedrals(system,test):
                         dihedral=abs(system.get_dihedral(i,j,k,l))
                         min_dihedral=min(min_dihedral,abs(dihedral))
                         all_dihedrals.append(dihedral)
-                       # print dihedral,abs(dihedral-crit[test_type]) #,abs(dihedral-crit[test_type]+180)
                         if abs(dihedral-crit[test_type])< tol[test_type] or abs(dihedral-crit[test_type]+180)< tol[test_type]:
                             if test_type == 'tetrahedron':
                                 pass
