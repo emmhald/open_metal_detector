@@ -25,8 +25,8 @@ import re
 
 def main():
     #analyse_results('Fe')
-#    analyze_for_td()
-    analyze_for_td_using_json()
+#    analyze_for_tfac()
+    analyze_for_tfac_using_json()
 #    for m in atoms().metals:
 #        analyse_results(m)
 #        analyse_results('U')
@@ -49,20 +49,20 @@ def read_json(filename):
 
     return json_dict
 
-def analyze_for_td_using_json():
+def analyze_for_tfac_using_json():
     output_folder="output"
-    td_analysis_folder='analysis/td_analysis'
+    tfac_analysis_folder='analysis/tfac_analysis'
     make_folder('analysis')
-    make_folder('analysis/td_analysis')
+    make_folder('analysis/tfac_analysis')
 
-#    td_analysis_folder='analysis/td_analysis_redo_all'
-#    td_analysis_folder='analysis/td_analysis_t5'
-    yes_4= open(td_analysis_folder+'/yes_4.out','w')
-    no_4= open(td_analysis_folder+'/no_4.out','w')
-    yes_5= open(td_analysis_folder+'/yes_5.out','w')
-    no_5= open(td_analysis_folder+'/no_5.out','w')
-    yes_6= open(td_analysis_folder+'/yes_6.out','w')
-    no_6= open(td_analysis_folder+'/no_6.out','w')
+#    tfac_analysis_folder='analysis/tfac_analysis_redo_all'
+#    tfac_analysis_folder='analysis/tfac_analysis_t5'
+    yes_4= open(tfac_analysis_folder+'/yes_4.out','w')
+    no_4= open(tfac_analysis_folder+'/no_4.out','w')
+    yes_5= open(tfac_analysis_folder+'/yes_5.out','w')
+    no_5= open(tfac_analysis_folder+'/no_5.out','w')
+    yes_6= open(tfac_analysis_folder+'/yes_6.out','w')
+    no_6= open(tfac_analysis_folder+'/no_6.out','w')
     #r = re.compile("([a-zA-Z]+)(-?(?:\d+())?(?:\.\d*())?(?:e-?\d+())?(?:\2|\1\3))")
 
 #    with open(output_folder+'/summary.out','r') as summary:
@@ -92,16 +92,16 @@ def analyze_for_td_using_json():
         for i in range(4,7):
             outfile=yn+'_'+str(i)
             eval(outfile).close()
-            datafile=open(td_analysis_folder+'/'+outfile+'.out','r')
-            td_list=[]
+            datafile=open(tfac_analysis_folder+'/'+outfile+'.out','r')
+            tfac_list=[]
             for l in datafile:
-                td=l.split(' ')[2].rstrip('\n')
-                td_list.append(float(td))
+                tfac=l.split(' ')[2].rstrip('\n')
+                tfac_list.append(float(tfac))
             eval(outfile).close()
             print yn,i
-            if len(td_list) > 0:
-                hist, edges = np.histogram(td_list,bins=40,range=(0,1),density=True)
-                hist_file=open(td_analysis_folder+'/'+outfile+'_hist.out','w')
+            if len(tfac_list) > 0:
+                hist, edges = np.histogram(tfac_list,bins=40,range=(0,1),density=True)
+                hist_file=open(tfac_analysis_folder+'/'+outfile+'_hist.out','w')
                 w=(edges[1]-edges[0])/2
                 for e,h in zip(edges,hist):
                     print>>hist_file,e+w,h
@@ -127,10 +127,10 @@ def  fetch_t_factor(json_dict):
     return t_factor
 
 
-def analyze_for_td():
-    td_analysis_folder='analysis/td_analysis_with_angles'
-    td_analysis_folder='analysis/td_analysis_redo_all'
-    td_analysis_folder='analysis/td_analysis_t5'
+def analyze_for_tfac():
+    tfac_analysis_folder='analysis/tfac_analysis_with_angles'
+    tfac_analysis_folder='analysis/tfac_analysis_redo_all'
+    tfac_analysis_folder='analysis/tfac_analysis_t5'
 
 
     summary= open('output/summary.out','r') #new_tol_first\
@@ -138,13 +138,13 @@ def analyze_for_td():
     summary= open('output/summary.out_5t','r') ;filetype=2 #new_tol_first\
 
 
-    yes_4= open(td_analysis_folder+'/yes_4.out','w')
-    no_4= open(td_analysis_folder+'/no_4.out','w')
-    yes_5= open(td_analysis_folder+'/yes_5.out','w')
-    no_5= open(td_analysis_folder+'/no_5.out','w')
-    yes_6= open(td_analysis_folder+'/yes_6.out','w')
-    no_6= open(td_analysis_folder+'/no_6.out','w')
-    list_of_om_crit=['plane','tetrahedron','non_TD','same_side','4_or_less']
+    yes_4= open(tfac_analysis_folder+'/yes_4.out','w')
+    no_4= open(tfac_analysis_folder+'/no_4.out','w')
+    yes_5= open(tfac_analysis_folder+'/yes_5.out','w')
+    no_5= open(tfac_analysis_folder+'/no_5.out','w')
+    yes_6= open(tfac_analysis_folder+'/yes_6.out','w')
+    no_6= open(tfac_analysis_folder+'/no_6.out','w')
+    list_of_om_crit=['plane','tetrahedron','non_tD','same_side','4_or_less']
     for l in summary:
         struc=l.split(' ')[0]
         if 'yes' in l:
@@ -179,14 +179,14 @@ def analyze_for_td():
         for i in range(4,7):
             outfile=yn+'_'+str(i)
             eval(outfile).close()
-            datafile=open(td_analysis_folder+'/'+outfile+'.out','r')
-            td_list=[]
+            datafile=open(tfac_analysis_folder+'/'+outfile+'.out','r')
+            tfac_list=[]
             for l in datafile:
-                td=l.split(' ')[filetype].rstrip('\n')
-                td_list.append(float(td))
+                tfac=l.split(' ')[filetype].rstrip('\n')
+                tfac_list.append(float(tfac))
             eval(outfile).close()
-            hist, edges = np.histogram(td_list,bins=40,range=(0,1),density=True)
-            hist_file=open(td_analysis_folder+'/'+outfile+'_hist.out','w')
+            hist, edges = np.histogram(tfac_list,bins=40,range=(0,1),density=True)
+            hist_file=open(tfac_analysis_folder+'/'+outfile+'_hist.out','w')
             w=(edges[1]-edges[0])/2
             for e,h in zip(edges,hist):
                 print>>hist_file,e+w,h
