@@ -41,8 +41,12 @@ def read_json(filename):
         json_filename=filename.split('.')[0]+'.JSON'
         json_dict=json.load(open(json_filename))
     except:
-        json_filename=filename.split('.')[0]+'.json'
-        json_dict=json.load(open(json_filename))
+        try:
+            json_filename=filename.split('.')[0]+'.json'
+            json_dict=json.load(open(json_filename))
+        except:
+            return False
+
     return json_dict
 
 def analyze_for_td_using_json():
@@ -70,6 +74,9 @@ def analyze_for_td_using_json():
             struc=l.split('.')[0]
             print struc
             json_dict=read_json(output_folder+'/'+struc+'/'+struc)
+            if not json_dict:
+                continue
+
             num_of_ligands=fetch_num_of_ligands(json_dict)
             om_type=fetch_if_open(json_dict)
             tfactors=fetch_t_factor(json_dict)

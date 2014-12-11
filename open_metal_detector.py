@@ -29,7 +29,6 @@ import argparse
 atom=atoms()
 target_folder='CORE-MOF-DB-June2014/'
 filetype='cif'
-number_of_structures=1
 def main():
     global filetype
 
@@ -37,6 +36,7 @@ def main():
     parser.add_argument('-p','--parameter_file', nargs='?',help='Name of parameters file')
     parser.add_argument('-s','--summary_file', nargs='?',help='Name of summary file')
     parser.add_argument('--continue_run', dest='continue_run', action='store_true')
+    parser.add_argument('-m','--max_structures', nargs='?',default=10000000,const=10000000, type=int, help='The maximum number of structures to run')
     parser.set_defaults(continue_run=False)
 
     args=parser.parse_args()
@@ -45,6 +45,7 @@ def main():
     if args.parameter_file:
         params_filename=args.parameter_file
 
+    number_of_structures=args.max_structures
     sfile='summary.out'
     if args.summary_file:
         sfile=args.summary_file
@@ -518,8 +519,6 @@ def check_metal_dihedrals(system,test):
                          dihedral_other1=system.get_dihedral(other_indeces[0],j,k,l)
                          dihedral_other2=system.get_dihedral(other_indeces[1],j,k,l)
                          if (dihedral_other1*dihedral_other2)  >= 0:
-                             print dihedral_other1,dihedral_other2
-                             raw_input()
                              open_metal_mof=True
                              test['metal_plane']=True
 
