@@ -49,7 +49,7 @@ def analyze_for_td_using_json():
     output_folder="output"
     td_analysis_folder='analysis/td_analysis'
     make_folder('analysis')
-    make_folder('analysis')
+    make_folder('analysis/td_analysis')
 
 #    td_analysis_folder='analysis/td_analysis_redo_all'
 #    td_analysis_folder='analysis/td_analysis_t5'
