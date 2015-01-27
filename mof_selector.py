@@ -413,7 +413,7 @@ def analyse_results(json_dicts,element,output_folder):
             if not os.path.exists(folder+'/'+struc):
                 os.makedirs(folder+'/'+struc)
             cif_name=struc+'.cif'
-            print>>summary_ele,struc #line.rstrip()
+            print>>summary_ele,struc+'.cif'
             cif=CifParser(cif_folder+cif_name)
             system=cif.get_structures()[0]
             system.to(fmt='xyz',filename = folder+'/'+struc+'/'+struc+'.xyz')
