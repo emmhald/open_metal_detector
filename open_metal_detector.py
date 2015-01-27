@@ -672,7 +672,7 @@ def add_co2(v1,v2,v3,v4,system):
         #co2_vector_C = [i+j for i,j in zip(pos, co2_vector_O)]
         co2_vector_C =find_adsorption_site(system,co2_vector_O,1.16)
         r = [i-j for i,j in zip(co2_vector_C, co2_vector_O)]
-        r_l = numpy.linalg.norm(numpy.array(r))
+        r_l = np.linalg.norm(np.array(r))
         r = [i/r_l for i in r]
         pos = list(rr*1.16 for rr in r)
         co2_vector_O_2 = [i+j for i,j in zip(pos, co2_vector_C)]
