@@ -684,11 +684,11 @@ def add_co2(v1,v2,v3,v4,system):
         #for e,c in zip(system.species,system.frac_coords):
         #    adsorption_site.append(e)
         #    adsorption_pos.append(c)
-        adsorption_site.append('F')
+        adsorption_site.append('O')
         adsorption_pos.append(p_avg_f)
-        adsorption_site.append('N')
+        adsorption_site.append('C')
         adsorption_pos.append(co2_vector_C_f)
-        adsorption_site.append('P')
+        adsorption_site.append('O')
         adsorption_pos.append(co2_vector_O_f)
 
     return Structure(system.lattice,adsorption_site,adsorption_pos)
