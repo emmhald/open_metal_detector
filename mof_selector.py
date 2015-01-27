@@ -24,9 +24,13 @@ import re
 
 
 def main():
-    #analyse_results('Fe')
-#    analyze_for_td()
-    analyze_for_td_using_json()
+    output_folder = "output"
+    json_dicts=load_structures(output_folder)
+    #analyze_for_tfac_using_json(json_dicts)
+    collect_statistics(json_dicts)
+
+    analyse_results('Mn')
+#    analyze_for_tfac()
 #    for m in atoms().metals:
 #        analyse_results(m)
 #        analyse_results('U')
@@ -38,106 +42,228 @@ def main():
 def read_json(filename):
 
     try:
-        json_filename=filename.split('.')[0]+'.JSON'
-        json_dict=json.load(open(json_filename))
+        json_filename = filename.split('.')[0]+'.JSON'
+        json_dict = json.load(open(json_filename))
     except:
-        json_filename=filename.split('.')[0]+'.json'
-        json_dict=json.load(open(json_filename))      
+        try:
+            json_filename = filename.split('.')[0]+'.json'
+            json_dict = json.load(open(json_filename))
+        except:
+            return False
+
     return json_dict
 
-def analyze_for_td_using_json():
-    output_folder="output"
-    td_analysis_folder='analysis/td_analysis'
-    make_folder('analysis')
-    make_folder('analysis')
-    
-#    td_analysis_folder='analysis/td_analysis_redo_all'
-#    td_analysis_folder='analysis/td_analysis_t5'
-    yes_4= open(td_analysis_folder+'/yes_4.out','w')
-    no_4= open(td_analysis_folder+'/no_4.out','w')
-    yes_5= open(td_analysis_folder+'/yes_5.out','w')
-    no_5= open(td_analysis_folder+'/no_5.out','w')
-    yes_6= open(td_analysis_folder+'/yes_6.out','w')
-    no_6= open(td_analysis_folder+'/no_6.out','w')
-    #r = re.compile("([a-zA-Z]+)(-?(?:\d+())?(?:\.\d*())?(?:e-?\d+())?(?:\2|\1\3))")
-    
-#    with open(output_folder+'/summary.out','r') as summary: 
-    yes_or_no=dict()
-    yes_or_no[True]='yes'
-    yes_or_no[False]='no'
+
+def load_structures(output_folder):
+    print 'Reading structures...',
+    json_dicts=[]
     with open('parameters_'+'cif'+'.txt','r') as parameters:
         for l in parameters:
-            struc=l.split('.')[0]
-            print struc
-            json_dict=read_json(output_folder+'/'+struc+'/'+struc)
-            num_of_ligands=fetch_num_of_ligands(json_dict)
-            om_type=fetch_if_open(json_dict)
-            tfactors=fetch_t_factor(json_dict)
-            for L,typ,tf in zip(num_of_ligands,om_type,tfactors):
-                if int(L) > 3 and int(L) < 7:
-                    outfile=yes_or_no[typ]+'_'+str(L)
-                    print outfile,struc,yes_or_no[typ],tf
-                    print>>eval(outfile),struc,yes_or_no[typ],tf
+            struc = l.split('.')[0]
+    #        print struc
+            json_dict = read_json(output_folder+'/'+struc+'/'+struc)
+            if not json_dict:
+                continue
+            json_dicts.append(json_dict)
+    print 'Done'
+    return json_dicts
+
+def analyze_for_tfac_using_json(json_dicts):
+    tfac_analysis_folder = 'analysis/tfac_analysis'
+    make_folder('analysis')
+    make_folder('analysis/tfac_analysis')
+
+#    tfac_analysis_folder='analysis/tfac_analysis_redo_all'
+#    tfac_analysis_folder='analysis/tfac_analysis_t5'
+    yes_4 = open(tfac_analysis_folder+'/yes_4.out','w')
+    no_4 = open(tfac_analysis_folder+'/no_4.out','w')
+    yes_5 = open(tfac_analysis_folder+'/yes_5.out','w')
+    no_5 = open(tfac_analysis_folder+'/no_5.out','w')
+    yes_6 = open(tfac_analysis_folder+'/yes_6.out','w')
+    no_6 = open(tfac_analysis_folder+'/no_6.out','w')
+    #r = re.compile("([a-zA-Z]+)(-?(?:\d+())?(?:\.\d*())?(?:e-?\d+())?(?:\2|\1\3))")
+
+#    with open(output_folder+'/summary.out','r') as summary:
+    yes_or_no = dict()
+    yes_or_no[True] = 'yes'
+    yes_or_no[False] = 'no'
+    #with open('parameters_'+'cif'+'.txt','r') as parameters:
+    #    for l in parameters:
+    #        struc = l.split('.')[0]
+    #        print struc
+    #        json_dict = read_json(output_folder+'/'+struc+'/'+struc)
+    #        if not json_dict:
+    #            continue
+
+    for json_dict in json_dicts:
+        struc=json_dict['material_name']
+        num_of_ligands = fetch_num_of_ligands(json_dict)
+        om_type = fetch_if_open(json_dict)
+        tfactors = fetch_t_factor(json_dict)
+        for L,typ,tf in zip(num_of_ligands,om_type,tfactors):
+            if int(L) > 3 and int(L) < 7:
+                outfile = yes_or_no[typ]+'_'+str(L)
+                print outfile,struc,yes_or_no[typ],tf
+                print>>eval(outfile),struc,yes_or_no[typ],tf
 
     print 'okay'
-    yes_no_list=['yes','no']
+    yes_no_list = ['yes','no']
     for yn in yes_no_list:
         for i in range(4,7):
-            outfile=yn+'_'+str(i)
+            outfile = yn+'_'+str(i)
             eval(outfile).close()
-            datafile=open(td_analysis_folder+'/'+outfile+'.out','r')
-            td_list=[]
+            datafile = open(tfac_analysis_folder+'/'+outfile+'.out','r')
+            tfac_list=[]
             for l in datafile:
-                td=l.split(' ')[2].rstrip('\n')
-                td_list.append(float(td))
+                tfac = l.split(' ')[2].rstrip('\n')
+                tfac_list.append(float(tfac))
             eval(outfile).close()
             print yn,i
-            if len(td_list) > 0:
-                hist, edges = np.histogram(td_list,bins=40,range=(0,1),density=True)
-                hist_file=open(td_analysis_folder+'/'+outfile+'_hist.out','w')
+            if len(tfac_list) > 0:
+                hist, edges = np.histogram(tfac_list,bins=40,range=(0,1),density=True)
+                hist_file = open(tfac_analysis_folder+'/'+outfile+'_hist.out','w')
                 w=(edges[1]-edges[0])/2
                 for e,h in zip(edges,hist):
                     print>>hist_file,e+w,h
-                
-                
-                
+
+def collect_statistics(json_dicts):
+    count_open=0.0
+    stats=dict()
+    for json_dict in json_dicts:
+        metal_sites=json_dict['metal_sites']
+        for ms in metal_sites:
+            metal=ms['metal']
+            stats[metal]=dict()
+            stats[metal]['count_open_sites']=0
+            stats[metal]['count_open']=0
+            stats[metal]['count']=0
+            stats[metal]['t0']=0
+            stats[metal]['t1']=0
+            stats[metal]['t2']=0
+            stats[metal]['t3']=0
+            stats[metal]['t4']=0
+            stats[metal]['t5']=0
+            stats[metal]['t6']=0
+            stats[metal]['tover']=0
+
+    for json_dict in json_dicts:
+        struc = json_dict['material_name']
+        if json_dict['metal_sites_found']:
+            count_open+=1
+        metal_sites = json_dict['metal_sites']
+        metals = set()
+        metals_open = set()
+        metals = set()
+        number_of_linkers = set()
+        for ms in metal_sites:
+            metal=ms['metal']
+            metals.add(metal)
+            if ms['is_open'] :
+                num_of_linkers=ms['number_of_linkers']
+                stats[metal]['count_open_sites']+=1
+                metals_open.add(metal)
+                number_of_linkers.add(num_of_linkers)
+        for m in metals:
+            stats[metal]['count']+=1
+        for m in metals_open:
+            stats[metal]['count_open']+=1
+        for l in number_of_linkers:
+            #if l < 6 and l > 2:
+            if l == 0:
+                print struc
+            if l > 6:
+                tfrac='tover'
+            else:
+                tfac = 't'+str(l)
+            stats[metal][tfac]+=1
+
+    # This returns a sorted tuple based on keyfunc, which uses the key count_open to reverse sort the stats dictionary
+    # A more consise but less clear sollution would be
+    #stats_sorted = sorted(stats.items(), key = lambda tup : (-tup[1]["count_open"]))
+    stats_sorted = sorted(stats.items(), key = keyfunc)
+    printouts=[]
+    for stat in stats_sorted:
+        #Since stats_sorted is a sorted tuple of the dictionary stats,
+        #the first element corresponds to the keys from the stas dictionary
+        #and the second element to the value, in this dictionary holding the stats for each metal
+        metal=stat[0]
+        s=stat[1]
+        printout=[]
+        printout.append(metal)
+        printout.append(s['count_open'])
+        printout.append(s['count_open_sites'])
+        percent = 100*float(s['count_open'])/float(s['count'])
+        percent_s = "{0:.2f} %".format(percent)
+        printout.append(percent_s)
+        #printout.append(1.1)
+        printout.append(s['t0'])
+        printout.append(s['t1'])
+        printout.append(s['t2'])
+        printout.append(s['t3'])
+        printout.append(s['t3'])
+        printout.append(s['t4'])
+        printout.append(s['t5'])
+        printout.append(s['t6'])
+        printout.append(s['tover'])
+        #string.center(s, wid)
+        printouts.append(printout)
+
+    print "Total MOFs:     ",len(json_dicts)
+    print "Open Metal MOFs: {0:} {1:.2f} %".format(int(count_open),100.0*count_open/len(json_dicts))
+    titles=['Metal','Open-Metal','Open-Metal-Site','Per.-Open','l0','l1','l2','l3','l4','l5','l6','l-over-6']
+    #print "{0:6}{1:12}{2:18}{3:6}{4:6}{5:6}".format(*titles)
+    print "{0:6}{1:^12}{2:^18}{3:^12}{4:^6}{5:^6}{6:^6}{7:^6}{8:^6}{9:^6}{10:^6}{11:^8}".format(*titles)
+    for p in printouts:
+        #print "{0:6}{1:11}{2:15}{3:6}{4:6}{5:6}".format(*p)
+        #print "{0:3}{1:6}{2:8}{3:>8}{4:6}{5:6}{6:6}{7:6}{8:6}{9:6}{10:6}{11:6}".format(*p)
+        print "{0:6}{1:^12}{2:^18}{3:^12}{4:^6}{5:^6}{6:^6}{7:^6}{8:^6}{9:^6}{10:^6}{11:^8}".format(*p)
+
+def keyfunc(tup):
+        key, d = tup
+        return -d["count_open"]
+
+
+
 def fetch_num_of_ligands(json_dict):
-    num_of_ligands=[]
+    num_of_ligands = []
     for ms in json_dict["metal_sites"]:
         num_of_ligands.append(ms["number_of_linkers"])
     return num_of_ligands
-  
+
 def fetch_if_open(json_dict):
-    om_type=[]
+    om_type = []
     for ms in json_dict["metal_sites"]:
         om_type.append(ms["is_open"])
-    return om_type  
-    
+    return om_type
+
 def  fetch_t_factor(json_dict):
-    t_factor=[]
+    t_factor = []
     for ms in json_dict["metal_sites"]:
         t_factor.append(ms["t_factor"])
-    return t_factor      
-    
-    
-def analyze_for_td():
-    td_analysis_folder='analysis/td_analysis_with_angles'
-    td_analysis_folder='analysis/td_analysis_redo_all'
-    td_analysis_folder='analysis/td_analysis_t5'
+    return t_factor
 
 
-    summary= open('output/summary.out','r') #new_tol_first\
-    summary= open('output/summary.out_first','r') ;filetype=1 #new_tol_first\
-    summary= open('output/summary.out_5t','r') ;filetype=2 #new_tol_first\
+#older methods. conisder deleting
 
 
-    yes_4= open(td_analysis_folder+'/yes_4.out','w')
-    no_4= open(td_analysis_folder+'/no_4.out','w')
-    yes_5= open(td_analysis_folder+'/yes_5.out','w')
-    no_5= open(td_analysis_folder+'/no_5.out','w')
-    yes_6= open(td_analysis_folder+'/yes_6.out','w')
-    no_6= open(td_analysis_folder+'/no_6.out','w')
-    list_of_om_crit=['plane','tetrahedron','non_TD','same_side','4_or_less']
+def analyze_for_tfac():
+    tfac_analysis_folder = 'analysis/tfac_analysis_with_angles'
+    tfac_analysis_folder = 'analysis/tfac_analysis_redo_all'
+    tfac_analysis_folder = 'analysis/tfac_analysis_t5'
+
+
+    summary = open('output/summary.out','r') #new_tol_first\
+    summary = open('output/summary.out_first','r') ;filetype=1 #new_tol_first\
+    summary = open('output/summary.out_5t','r') ;filetype=2 #new_tol_first\
+
+
+    yes_4 = open(tfac_analysis_folder+'/yes_4.out','w')
+    no_4 = open(tfac_analysis_folder+'/no_4.out','w')
+    yes_5 = open(tfac_analysis_folder+'/yes_5.out','w')
+    no_5 = open(tfac_analysis_folder+'/no_5.out','w')
+    yes_6 = open(tfac_analysis_folder+'/yes_6.out','w')
+    no_6 = open(tfac_analysis_folder+'/no_6.out','w')
+    list_of_om_crit = ['plane','tetrahedron','non_tD','same_side','4_or_less']
     for l in summary:
         struc=l.split(' ')[0]
         if 'yes' in l:
@@ -172,14 +298,14 @@ def analyze_for_td():
         for i in range(4,7):
             outfile=yn+'_'+str(i)
             eval(outfile).close()
-            datafile=open(td_analysis_folder+'/'+outfile+'.out','r')
-            td_list=[]
+            datafile=open(tfac_analysis_folder+'/'+outfile+'.out','r')
+            tfac_list=[]
             for l in datafile:
-                td=l.split(' ')[filetype].rstrip('\n')
-                td_list.append(float(td))
+                tfac=l.split(' ')[filetype].rstrip('\n')
+                tfac_list.append(float(tfac))
             eval(outfile).close()
-            hist, edges = np.histogram(td_list,bins=40,range=(0,1),density=True)
-            hist_file=open(td_analysis_folder+'/'+outfile+'_hist.out','w')
+            hist, edges = np.histogram(tfac_list,bins=40,range=(0,1),density=True)
+            hist_file=open(tfac_analysis_folder+'/'+outfile+'_hist.out','w')
             w=(edges[1]-edges[0])/2
             for e,h in zip(edges,hist):
                 print>>hist_file,e+w,h

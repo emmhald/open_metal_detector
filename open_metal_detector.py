@@ -24,40 +24,59 @@ import random
 import pymatgen.io.smartio as sio
 from atomic_parameters import atoms
 import json
-import numpy
+import argparse
 
 atom=atoms()
 target_folder='CORE-MOF-DB-June2014/'
 filetype='cif'
-number_of_structures=5100
 def main():
-    t0 = time.time()
-    params_file= open('parameters_'+filetype+'.txt','r')
-    count=1
-    clear_files()
-    for struc in params_file:
-        t0s = time.time()
-        count+=1
-        uc_params=[]
-        line_elements=shlex.split(struc)
-        filename=line_elements[0]
-        if filetype=='xyz':
-            for j in range(1,7):
-                uc_params.append(float(line_elements[j]))
-        analyze_structure(filename,uc_params)
-        t1s = time.time()
-        print 'Time:',t1s-t0s
-        if count >number_of_structures:
-            break
-    params_file.close()
-    t1 = time.time()
-    print 'Total Time',t1-t0
+    global filetype
 
-def clear_files():
+    parser = argparse.ArgumentParser(description='Split file into batches')
+    parser.add_argument('-p','--parameter_file', nargs='?',help='Name of parameters file')
+    parser.add_argument('-s','--summary_file', nargs='?',help='Name of summary file')
+    parser.add_argument('--continue_run', dest='continue_run', action='store_true')
+    parser.add_argument('-m','--max_structures', nargs='?',default=10000000,const=10000000, type=int, help='The maximum number of structures to run')
+    parser.set_defaults(continue_run=False)
+
+    args=parser.parse_args()
+    cont=args.continue_run
+    params_filename='parameters_'+filetype+'.txt'
+    if args.parameter_file:
+        params_filename=args.parameter_file
+
+    number_of_structures=args.max_structures
+    sfile='summary.out'
+    if args.summary_file:
+        sfile=args.summary_file
+    t0 = time.time()
+    with open(params_filename,'r') as params_file:
+        if not cont:
+            clear_files(sfile,cont)
+        for i,struc in enumerate(params_file):
+            t0s = time.time()
+            uc_params=[]
+            line_elements=shlex.split(struc)
+            filename=line_elements[0]
+            if filetype=='xyz':
+                for j in range(1,7):
+                    uc_params.append(float(line_elements[j]))
+            analyze_structure(filename,uc_params,sfile,cont)
+            t1s = time.time()
+            print 'Time:',t1s-t0s
+            if i+1 >= number_of_structures:
+                break
+        params_file.close()
+        t1 = time.time()
+        print 'Total Time',t1-t0
+
+
+def clear_files(sfile,cont):
     make_folder('output')
-    open_metal_mofs= open('output/open_metal_mofs.out','w')
-    problematic_mofs= open('output/problematic.out','w')
-    summary_mofs= open('output/summary.out','w')
+    file_type='w'
+    open_metal_mofs= open('output/open_metal_mofs.out',file_type)
+    problematic_mofs= open('output/problematic.out',file_type)
+    summary_mofs= open('output/'+sfile,file_type)
     open_metal_mofs.close()
     problematic_mofs.close()
     summary_mofs.close()
@@ -66,18 +85,22 @@ def make_folder(folder):
     if not os.path.exists(folder):
         os.makedirs(folder)
 
-def analyze_structure(filename,uc_params):
+def analyze_structure(filename,uc_params,sfile,cont):
+    global target_folder
 
     mof_name=filename.split('.')[0]
     output_folder='output/'+mof_name
-
+    json_file_out=output_folder+'/'+mof_name+'.json'
+    if cont and os.path.exists(json_file_out):
+        print mof_name,'has run already... skipping'
+        return
     make_folder(output_folder)
     make_folder('output/open_metal_mofs')
     make_folder('output/problematic_metal_mofs')
 
     open_metal_mofs= open('output/open_metal_mofs.out','a')
     problematic_mofs= open('output/problematic.out','a')
-    summary_mofs= open('output/summary.out','a')
+    summary_mofs= open('output/'+sfile,'a')
 
     if filetype=='xyz':
         print 'Reading Xyzs'
@@ -190,8 +213,6 @@ def analyze_structure(filename,uc_params):
         print>>problematic_mofs,mof_name
         shutil.copyfile(target_folder+filename, 'output/problematic_metal_mofs/'+filename)
 
-    with open(output_folder+'/'+mof_name+'.JSON', 'w') as outfile:
-        json.dump(output_json, outfile,indent=3)
 
     write_xyz_file(output_folder+'/'+mof_name+'_metal.xyz',metal)
     write_xyz_file(output_folder+'/'+mof_name+'_organic.xyz',organic)
@@ -202,6 +223,8 @@ def analyze_structure(filename,uc_params):
     open_metal_mofs.close()
     summary_mofs.close()
     problematic_mofs.close()
+    with open(json_file_out, 'w') as outfile:
+        json.dump(output_json, outfile,indent=3)
 
 
 def write_summary(output_json):
@@ -219,7 +242,7 @@ def write_summary(output_json):
     open_metal_str='no'
     if output_json['metal_sites_found']:
         open_metal_str='yes'
-    return output_json['material_name']+str(counter_om)+str(output_json['open_metal_density'])+str(output_json['max_surface_area_frac'])+str(output_json['max_surface_area'])+open_metal_str+om_details
+    return output_json['material_name']+' '+str(counter_om)+' '+str(output_json['open_metal_density'])+' '+str(output_json['max_surface_area_frac'])+' '+str(output_json['max_surface_area'])+' '+open_metal_str+' '+om_details
 
 
 def write_xyz_file(filename,system):
@@ -395,8 +418,9 @@ def get_t_factor(system):
             angles.append(system.get_angle(i,0,j))
             if max_angle < angles[-1]:
                 max_index=i
+                sec_index=j
                 max_angle=angles[-1]
-            #print i,j,angles[-1]
+#                print i,j,angles[-1]
 
     angles.sort()
     if num-1>3 and num-1<6:
@@ -404,17 +428,36 @@ def get_t_factor(system):
         alpha=angles[-2]
         gamma=angles[0]
     elif num-1 ==6:
+        print angles
         angles_max=[]
         for j in range(1,num):
             if j != max_index:
                 angles_max.append(system.get_angle(max_index,0,j))
         angles_max.sort()
+#        print angles_max
+#        print angles_max[0], angles_max[1]
         beta=angles_max[-2]
         alpha=angles_max[-1]
-        gamma=angles_max[0]
+        gamma=angles_max[2]
+#New Angles VOG
+        max_angle=0.0
+        for i in range(1,num-1):
+            for j in range(i+1,num):
+                if i!= max_index and i!= sec_index and j!= max_index and j!= sec_index:
+                    angles.append(system.get_angle(i,0,j))
+                    if max_angle < angles[-1]:
+                         thr_index=i
+                         fou_index=j
+                         max_angle=angles[-1]
+                         delta=angles[-1]
+
+        for i in range(1,num-1):
+            for j in range(i+1,num):
+                if i!= max_index and i!= sec_index and i!= thr_index and i!= fou_index and j!= max_index and j!= sec_index and j!= thr_index and j!= fou_index:
+                   epsilon=system.get_angle(i,0,j)
 
     if num-1==6:
-        tau=get_t6_factor(alpha,beta,gamma)
+        tau=get_t6_factor(alpha,beta,gamma,delta,epsilon)
     elif num-1==5:
         tau=get_t5_factor(alpha,beta)
     elif num-1==4:
@@ -429,11 +472,17 @@ def get_t4_factor(a,b):
 def get_t5_factor(a,b):
     return (b-a)/60.0
 
-def get_t6_factor(a,b,c):
+def get_t6_factor(a,b,c,d,e):
 #    return 1.0-(a-c)/120
-    print 'abc',a,b,c
-    print abs(a-b),abs(a-c)
-    return (abs(90.0-(a-b))/180.0)+(abs(90.0-(a-c))/90.0)
+    print 'abcde',a,b,c,d,e
+#    print (abs(90.0-(a-b))/180.0)
+#    print (abs(90.0-(a-c))/90.0)
+#    print ((e-d)/180)
+    return (e/180)
+#    return (1-(180-e)/140 )
+#    return ((540-a-d-e)/180)
+#    return (1- (abs(90.0-(a-b))/180.0) - (abs(90.0-(a-c))/90.0) - ((e-d)/180))
+#    return (abs(90.0-(a-b))/180.0)+(abs(90.0-(a-c))/90.0)
 
 
 def check_metal_dihedrals(system,test):
@@ -442,7 +491,7 @@ def check_metal_dihedrals(system,test):
     tol=dict()
 
     crit['plane']=180
-    tol['plane']=35
+    tol['plane']=30
 
     crit['tetrahedron']=70
     tol['tetrahedron']=10
@@ -465,8 +514,10 @@ def check_metal_dihedrals(system,test):
                          if len(other_indeces) > 2:
                              print 'Something went terribly wrong'
                              raw_input()
-                         dihedral_other1=abs(system.get_dihedral(other_indeces[0],j,k,l))
-                         dihedral_other2=abs(system.get_dihedral(other_indeces[1],j,k,l))
+                         #dihedral_other1=abs(system.get_dihedral(other_indeces[0],j,k,l))
+                         #dihedral_other2=abs(system.get_dihedral(other_indeces[0],j,k,l))
+                         dihedral_other1=system.get_dihedral(other_indeces[0],j,k,l)
+                         dihedral_other2=system.get_dihedral(other_indeces[1],j,k,l)
                          if (dihedral_other1*dihedral_other2)  >= 0:
                              open_metal_mof=True
                              test['metal_plane']=True
@@ -494,14 +545,16 @@ def check_non_metal_dihedrals(system,test):
     tol=dict()
     crit['plane']=180
     tol['plane']=35
+    crit['plane_5l']=180
+    tol['plane_5l']=30
     crit['tetrahedron']=70
     tol['tetrahedron']=10
     if num-1==4:
         test_type='tetrahedron'
         om_type='non_TD'
     elif num-1 == 5:
-        test_type='plane'
-        om_type='plane'
+        test_type='plane_5l'
+        om_type='plane_5l'
     elif num-1 > 5:
         test_type='plane'
         om_type='same_side'
@@ -524,7 +577,6 @@ def check_non_metal_dihedrals(system,test):
                         dihedral=abs(system.get_dihedral(i,j,k,l))
                         min_dihedral=min(min_dihedral,abs(dihedral))
                         all_dihedrals.append(dihedral)
-                       # print dihedral,abs(dihedral-crit[test_type]) #,abs(dihedral-crit[test_type]+180)
                         if abs(dihedral-crit[test_type])< tol[test_type] or abs(dihedral-crit[test_type]+180)< tol[test_type]:
                             if test_type == 'tetrahedron':
                                 pass
@@ -655,7 +707,8 @@ def calc_plane(x, y, z):
 
 def check_if_plane_on_metal(m_i,indeces,system):
     crit=180
-    tol=12.5
+    #tol=12.5
+    tol=25.0
     for i in range(1,len(indeces)):
         for j in range(1,len(indeces)):
             for k in range(1,len(indeces)):
