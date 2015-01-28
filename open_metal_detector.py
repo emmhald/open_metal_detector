@@ -124,8 +124,6 @@ def analyze_structure(filename,uc_params,sfile,cont):
         print>>summary_mofs,mof_name+' not metal was found in structure'
         summary_mofs.close()
         return
-    #test = find_coord_sphere(0,system)
-    find_coordination_sequence(0, system)
     first_coordination_structure,first_coordnation_structure_each_metal=find_first_coordination_sphere(metal,system)
     m_sa_frac,m_surface_area=0.0,0.0
     #m_sa_frac,m_surface_areaget_metal_surface_areas(metal,system)
@@ -144,6 +142,7 @@ def analyze_structure(filename,uc_params,sfile,cont):
     #summary=str(m_sa_frac)+' '+str(m_surface_area)+' '
     #summary=summary+' '+'no'
     count_omsites=0
+    cs_list = [] # list of coordination sequences for each open metal found
     for m,open_metal_candidate in enumerate(first_coordnation_structure_each_metal):
         site_dict=dict()
         op,pr,t,ads,tf,min_dih,all_dih=check_if_open(open_metal_candidate)
@@ -158,9 +157,11 @@ def analyze_structure(filename,uc_params,sfile,cont):
 
         if op:
             count_omsites+=1
-            #unique_site=False
-            unique_site = check_if_unique(output_json,site_dict)
+            oms_index = match_index(str(open_metal_candidate.species[0]),open_metal_candidate.frac_coords[0],system)
+            cs = find_coordination_sequence(oms_index, system)
+            unique_site = check_if_unique(cs_list,cs)
             if len(ads) > 0 and unique_site:
+                cs_list.append(cs)
                 mof_with_co2=merge_structures(ads,system)
                 cif=CifWriter(ads)
                 cif.write_file(output_folder+'/'+mof_name+'_ads'+str(count_omsites)+'.cif')
@@ -226,16 +227,21 @@ def analyze_structure(filename,uc_params,sfile,cont):
         json.dump(output_json, outfile,indent=3)
 
 
-def check_if_unique(output_dict,struc_dict):
-    '''Check if a given site is unique based on the number of linkers it has and the value of it's tfactor'''
-    num_of_linkers = struc_dict['number_of_linkers']
-    tfac = struc_dict['t_factor']
-    check = True
-    for ms in output_dict['metal_sites']:
-        if num_of_linkers == ms['number_of_linkers']:
-            if num_of_linkers == ms['t_factor']:
-                check = False
-    return check
+def check_if_unique(cs_list,cs):
+    '''Check if a given site is unique based on its coordination sequence'''
+    for cs_i in cs_list:
+        if compare_lists(cs_i,cs):
+            return False
+    return True
+
+def compare_lists(l1,l2):
+    if len(l1) != len(l2):
+        return False
+    for i,j in zip(l1,l2):
+        if i != j:
+            return False
+
+    return True
 
 
 def write_summary(output_json):
@@ -272,13 +278,11 @@ def find_coord_sphere(center,structure):
         coord_sphere=[]
         for i,dis in enumerate(dist[0]):
             bond_tol=get_bond_tolerance(str(structure.species[center]),str(structure.species[i]))*increase
-            bond_tol = 0.5
             if bond_check(str(structure.species[center]),str(structure.species[i]),dis,bond_tol):
                 first_coordnation_list_species.append(structure.species[i])
                 first_coordnation_list_coords.append(structure.frac_coords[i])
                 coord_sphere.append(i)
                 bonds_found+=1
-        break
         check_structure=Structure(structure.lattice,first_coordnation_list_species,first_coordnation_list_coords)
         if check_if_valid_bonds(check_structure,bond_tol,increase):
             break
@@ -287,7 +291,7 @@ def find_coord_sphere(center,structure):
             if increase < 0 :
                 print 'something went terribly wrong'
                 raw_input()
-            print 'Increasing bond_tolerance by ',increase
+        #    print 'Increasing bond_tolerance by ',increase
     #print coord_sphere
     #i = center
     #print structure.species[i],structure.cart_coords[i][0],structure.cart_coords[i][1],structure.cart_coords[i][2]
@@ -401,6 +405,12 @@ def split_structure_to_organic_and_metal(structure):
     structure_organic=Structure(structure.lattice,elements_organic,coords_organic)
 
     return structure_metal,structure_organic
+
+def match_index(ele,f_coords,system):
+    dist=system.lattice.get_all_distances(f_coords,system.frac_coords)
+    for i,d in enumerate(dist[0]):
+        if d <0.001 and str(system.species[i]) == ele:
+            return i
 
 def check_if_6_or_more(system):
     if system.num_sites > 6:
@@ -981,7 +991,7 @@ def find_coordination_sequence(center,structure):
     shell_list = set([(center,(0,0,0))])
     shell_list_prev = set([])
     all_shells = set(shell_list)
-    n_shells = 12
+    n_shells = 4
     cs = []
     print structure.species[center],structure.cart_coords[center][0],structure.cart_coords[center][1],structure.cart_coords[center][2]
     ele = [(str(structure.species[center]))]
@@ -1032,7 +1042,7 @@ def find_coordination_sequence(center,structure):
     #coordination_structure = center_around_metal(coordination_structure)
     write_xyz_file('temp.xyz',coordination_structure)
     print cs
-    raw_input()
+    return cs
 
 
 if __name__=='__main__':
