@@ -124,6 +124,7 @@ def analyze_structure(filename,uc_params,sfile,cont):
         print>>summary_mofs,mof_name+' not metal was found in structure'
         summary_mofs.close()
         return
+    test = find_coord_sphere(0,system)
     first_coordination_structure,first_coordnation_structure_each_metal=find_first_coordination_sphere(metal,system)
     m_sa_frac,m_surface_area=0.0,0.0
     #m_sa_frac,m_surface_areaget_metal_surface_areas(metal,system)
@@ -139,8 +140,8 @@ def analyze_structure(filename,uc_params,sfile,cont):
     output_json['metal_sites_found']=False
     output_json['metal_sites']=list()
 
-    summary=str(m_sa_frac)+' '+str(m_surface_area)+' '
-    summary=summary+' '+'no'
+    #summary=str(m_sa_frac)+' '+str(m_surface_area)+' '
+    #summary=summary+' '+'no'
     count_omsites=0
     for m,open_metal_candidate in enumerate(first_coordnation_structure_each_metal):
         site_dict=dict()
@@ -152,51 +153,49 @@ def analyze_structure(filename,uc_params,sfile,cont):
         site_dict["number_of_linkers"]=open_metal_candidate.num_sites-1
         site_dict["min_dihedral"]=min_dih
         site_dict["all_dihedrals"]=all_dih
-
         site_dict["unique"]=False
+
         if op:
             count_omsites+=1
-            #print len(ads)
-            if len(ads)>0:
+            #unique_site=False
+            unique_site = check_if_unique(output_json,site_dict)
+            if len(ads) > 0 and unique_site:
                 mof_with_co2=merge_structures(ads,system)
                 cif=CifWriter(ads)
                 cif.write_file(output_folder+'/'+mof_name+'_ads'+str(count_omsites)+'.cif')
                 cif=CifWriter(mof_with_co2)
                 cif.write_file(output_folder+'/'+mof_name+'_first_coordination_sphere_with_ads'+str(count_omsites)+'.cif')
-                #xyz_op_with_adsorbate=xyz_file()
-                #xyz_op_with_adsorbate.make_xyz(output_folder+'/'+mof_name+'_first_coordination_sphere_with_ads'+str(count_omsites)+'.xyz',mof_with_co2.cart_coords,mof_with_co2.species)
-          #  op_with_adsorbate=find_adsorption_site(open_metal_candidate)
             open_metal_site=op
             problematic_structure=pr
             test.append(t)
             if not output_json['metal_sites_found']:
                 output_json['metal_sites_found']=True
-            if not 'yes' in summary:
-                summary=summary.replace('no','yes') #=summary+' '+'yes'
-            string=' '+str(open_metal_candidate.species[0])+','+str(open_metal_candidate.num_sites-1)+'L'
+            #if not 'yes' in summary:
+            #    summary=summary.replace('no','yes') #=summary+' '+'yes'
+            #string=' '+str(open_metal_candidate.species[0])+','+str(open_metal_candidate.num_sites-1)+'L'
             site_dict["type"]=''
             for ti in t:
                 if t[ti]:
-                    string=string+','+str(ti)
+                    #string=string+','+str(ti)
                     site_dict["type"]=site_dict["type"]+','+str(ti)
-            unique_site=False
-            if not string in summary and not str(tf) in summary:
-                unique_site=True
-                site_dict["unique"]=True
-        else:
-            string=' '+str(open_metal_candidate.species[0])+','+str(open_metal_candidate.num_sites-1)+'L'
-            unique_site=False
-            if str(tf) in summary: #not string in summary and not
-                unique_site=True
-                site_dict["unique"]=True
-        if unique_site:
-            summary=summary+' '+string
-            summary=summary+','+str(tf)
-            summary=summary+','+str(min_dih)
+            #if not string in summary and not str(tf) in summary:
+            #    unique_site=True
+            #    site_dict["unique"]=True
+        #else:
+            #string=' '+str(open_metal_candidate.species[0])+','+str(open_metal_candidate.num_sites-1)+'L'
+            #unique_site=False
+            #if str(tf) in summary: #not string in summary and not
+            #    unique_site=True
+            #    site_dict["unique"]=True
+        #if unique_site:
+        #    summary=summary+' '+string
+        #    summary=summary+','+str(tf)
+        #    summary=summary+','+str(min_dih)
+
         xyz_first_coord_sphere=xyz_file()
         xyz_first_coord_sphere.make_xyz(output_folder+'/'+mof_name+'_first_coordination_sphere'+str(m)+'.xyz',open_metal_candidate.cart_coords,open_metal_candidate.species)
         output_json['metal_sites'].append(site_dict)
-    summary=mof_name+' '+str(count_omsites)+' '+str(count_omsites/system.volume)+' '+summary
+    #summary=mof_name+' '+str(count_omsites)+' '+str(count_omsites/system.volume)+' '+summary
     summary=write_summary(output_json)
 
     if open_metal_site:
@@ -213,7 +212,6 @@ def analyze_structure(filename,uc_params,sfile,cont):
         print>>problematic_mofs,mof_name
         shutil.copyfile(target_folder+filename, 'output/problematic_metal_mofs/'+filename)
 
-
     write_xyz_file(output_folder+'/'+mof_name+'_metal.xyz',metal)
     write_xyz_file(output_folder+'/'+mof_name+'_organic.xyz',organic)
     write_xyz_file(output_folder+'/'+mof_name+'.xyz',system)
@@ -225,6 +223,18 @@ def analyze_structure(filename,uc_params,sfile,cont):
     problematic_mofs.close()
     with open(json_file_out, 'w') as outfile:
         json.dump(output_json, outfile,indent=3)
+
+
+def check_if_unique(output_dict,struc_dict):
+    '''Check if a given site is unique based on the number of linkers it has and the value of it's tfactor'''
+    num_of_linkers = struc_dict['number_of_linkers']
+    tfac = struc_dict['t_factor']
+    check = True
+    for ms in output_dict['metal_sites']:
+        if num_of_linkers == ms['number_of_linkers']:
+            if num_of_linkers == ms['t_factor']:
+                check = False
+    return check
 
 
 def write_summary(output_json):
@@ -249,8 +259,41 @@ def write_xyz_file(filename,system):
     xyz=xyz_file()
     xyz.make_xyz(filename,system.cart_coords,system.species)
 
-def find_first_coordination_sphere(metal,structure_full):
 
+def find_coord_sphere(center,structure):
+    dist=structure.lattice.get_all_distances(structure.frac_coords[center],structure.frac_coords)
+    increase=1.3
+    while True:
+        bonds_found=0
+        first_coordnation_list_species=[]
+        first_coordnation_list_coords=[]
+        coord_sphere=[]
+        for i,dis in enumerate(dist[0]):
+            bond_tol=get_bond_tolerance(str(structure.species[center]),str(structure.species[i]))*increase
+            if bond_check(str(structure.species[center]),str(structure.species[i]),dis,bond_tol):
+                first_coordnation_list_species.append(structure.species[i])
+                first_coordnation_list_coords.append(structure.frac_coords[i])
+                coord_sphere.append(i)
+                bonds_found+=1
+        check_structure=Structure(structure.lattice,first_coordnation_list_species,first_coordnation_list_coords)
+        if check_if_valid_bonds(check_structure,bond_tol,increase):
+            break
+        else:
+            increase-=0.1
+            if increase < 0 :
+                print 'something went terribly wrong'
+                raw_input()
+            print 'Increasing bond_tolerance by ',increase
+    print coord_sphere
+    i = center
+    print structure.species[i],structure.cart_coords[i][0],structure.cart_coords[i][1],structure.cart_coords[i][2]
+    for i in coord_sphere:
+        print structure.species[i],structure.cart_coords[i][0],structure.cart_coords[i][1],structure.cart_coords[i][2]
+    raw_input()
+    return coord_sphere
+
+
+def find_first_coordination_sphere(metal,structure_full):
     tol=0.3
     first_coordination_structure=Structure(metal.lattice,metal.species,metal.frac_coords)
     first_coordnation_structure_each_metal=[]
@@ -378,7 +421,6 @@ def check_if_open(system):
     dihedral_tolerance=5
     num=system.num_sites
     max_cordination=3
-
 
     #if num-1 ==4:
     #    print 'tfactor',tf
@@ -665,7 +707,6 @@ def add_co2(v1,v2,v3,v4,system):
         #r = [i-j for i,j in zip(co2_vector_O, system.cart_coords[0])]
         #r_l = numpy.linalg.norm(numpy.array(r))
         #r = [i/r_l for i in r]
-
         #pos = list(rr*ads_dist for rr in r)
         #co2_vector_O = [i+j for i,j in zip(pos, system.cart_coords[0])]
         #pos = list(rr*1.16 for rr in r)
@@ -768,7 +809,11 @@ def center_around_metal(system):
     return system_centered
 
 def bond_check(ele1,ele2,dist,bond_tol):
-    if dist-get_sum_of_cov_radii(ele1,ele2) < bond_tol:
+    #bond = dist #- get_sum_of_cov_radii(ele1,ele2)
+    up_bound = get_sum_of_cov_radii(ele1,ele2) + bond_tol
+    low_bound = get_sum_of_cov_radii(ele1,ele2) - bond_tol
+    #if bond < bond_tol and abs(dist) > 0:
+    if dist < up_bound and dist > low_bound: # and abs(dist) > 0:
         return True
     else:
         return False
@@ -924,6 +969,19 @@ def is_heavy_metal(ele): #\m/
          return True
     else:
         return False
+
+
+def find_coordination_sequence():
+    '''computes the coordination sequence up to the Nth coordination shell
+    as input it takes the MOF as a pymatgen Structure and the index of the center metal in the Structure
+    '''
+    shell_list = set([center])
+    n_shells = 3
+    cs = []
+    for n in n_shells:
+        for a in shell_list:
+            c_set = find_coordination_sphere(a)
+
 
 
 
