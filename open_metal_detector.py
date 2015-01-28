@@ -124,7 +124,8 @@ def analyze_structure(filename,uc_params,sfile,cont):
         print>>summary_mofs,mof_name+' not metal was found in structure'
         summary_mofs.close()
         return
-    test = find_coord_sphere(0,system)
+    #test = find_coord_sphere(0,system)
+    find_coordination_sequence(0, system)
     first_coordination_structure,first_coordnation_structure_each_metal=find_first_coordination_sphere(metal,system)
     m_sa_frac,m_surface_area=0.0,0.0
     #m_sa_frac,m_surface_areaget_metal_surface_areas(metal,system)
@@ -262,6 +263,7 @@ def write_xyz_file(filename,system):
 
 def find_coord_sphere(center,structure):
     dist=structure.lattice.get_all_distances(structure.frac_coords[center],structure.frac_coords)
+
     increase=1.3
     while True:
         bonds_found=0
@@ -270,11 +272,13 @@ def find_coord_sphere(center,structure):
         coord_sphere=[]
         for i,dis in enumerate(dist[0]):
             bond_tol=get_bond_tolerance(str(structure.species[center]),str(structure.species[i]))*increase
+            bond_tol = 0.5
             if bond_check(str(structure.species[center]),str(structure.species[i]),dis,bond_tol):
                 first_coordnation_list_species.append(structure.species[i])
                 first_coordnation_list_coords.append(structure.frac_coords[i])
                 coord_sphere.append(i)
                 bonds_found+=1
+        break
         check_structure=Structure(structure.lattice,first_coordnation_list_species,first_coordnation_list_coords)
         if check_if_valid_bonds(check_structure,bond_tol,increase):
             break
@@ -284,12 +288,12 @@ def find_coord_sphere(center,structure):
                 print 'something went terribly wrong'
                 raw_input()
             print 'Increasing bond_tolerance by ',increase
-    print coord_sphere
-    i = center
-    print structure.species[i],structure.cart_coords[i][0],structure.cart_coords[i][1],structure.cart_coords[i][2]
-    for i in coord_sphere:
-        print structure.species[i],structure.cart_coords[i][0],structure.cart_coords[i][1],structure.cart_coords[i][2]
-    raw_input()
+    #print coord_sphere
+    #i = center
+    #print structure.species[i],structure.cart_coords[i][0],structure.cart_coords[i][1],structure.cart_coords[i][2]
+    #for i in coord_sphere:
+    #    print structure.species[i],structure.cart_coords[i][0],structure.cart_coords[i][1],structure.cart_coords[i][2]
+    #raw_input()
     return coord_sphere
 
 
@@ -805,7 +809,6 @@ def center_around_metal(system):
             if dist_after>dist_before:
                 c_i_centered=c_i
         system_centered.append(system.species[i],c_i_centered)
-
     return system_centered
 
 def bond_check(ele1,ele2,dist,bond_tol):
@@ -971,20 +974,66 @@ def is_heavy_metal(ele): #\m/
         return False
 
 
-def find_coordination_sequence():
+def find_coordination_sequence(center,structure):
     '''computes the coordination sequence up to the Nth coordination shell
     as input it takes the MOF as a pymatgen Structure and the index of the center metal in the Structure
     '''
-    shell_list = set([center])
-    n_shells = 3
+    shell_list = set([(center,(0,0,0))])
+    shell_list_prev = set([])
+    all_shells = set(shell_list)
+    n_shells = 12
     cs = []
-    for n in n_shells:
+    print structure.species[center],structure.cart_coords[center][0],structure.cart_coords[center][1],structure.cart_coords[center][2]
+    ele = [(str(structure.species[center]))]
+    coords = [ [structure.frac_coords[center][0], structure.frac_coords[center][1], structure.frac_coords[center][2]]]
+    coordination_structure = (Structure(structure.lattice,ele,coords))
+    for n in range(0,n_shells):
+        c_set = set([])
+        for a_uc in shell_list:
+            a = a_uc[0]
+            lattice = a_uc[1]
+            #print lattice
+            coord_sphere = find_coord_sphere(a,structure)
+            coord_sphere_with_uc = []
+            for c in coord_sphere:
+                dist = structure.lattice.get_all_distance_and_image(structure.frac_coords[a],structure.frac_coords[c])
+                uc = lattice -min(dist)[1]
+                coord_sphere_with_uc.append((c,tuple(uc)))
+            #print n,a,coord_sphere
+            coord_sphere_with_uc = tuple(coord_sphere_with_uc)
+            #print type(coord_sphere_with_uc)
+            #raw_input()
+            c_set = c_set.union(set(coord_sphere_with_uc))
+        #print 'a',c_set,shell_list_prev
+        for a in shell_list_prev:
+            c_set.discard(a)
+        #print 'b',c_set,shell_list
         for a in shell_list:
-            c_set = find_coordination_sphere(a)
+            c_set.discard(a)
+        #print 'c',c_set
+        #raw_input()
 
+        for i_uc in c_set:
+            i = i_uc[0]
+            #ele = (str(structure.species[i]))
+            ele = atom.elements[n+3]
+            coords = [structure.frac_coords[i][0], structure.frac_coords[i][1], structure.frac_coords[i][2]]
+            coordination_structure.append(ele,coords)
+            #print atom.elements[n],structure.cart_coords[i][0],structure.cart_coords[i][1],structure.cart_coords[i][2]
+            #print atom.elements[n],structure.cart_coords[i][0],structure.cart_coords[i][1],structure.cart_coords[i][2]
 
+        #cs.append(len(all_shells.union(c_set)) - len(all_shells))
+        #print len(shell_list.union(c_set)),len(shell_list)
+        #cs.append(len(shell_list.union(c_set)) - len(shell_list))
+        cs.append(len(c_set))
+        all_shells = all_shells.union(c_set)
+        shell_list_prev = set(shell_list)
+        shell_list = set(c_set)
+    #coordination_structure = center_around_metal(coordination_structure)
+    write_xyz_file('temp.xyz',coordination_structure)
+    print cs
+    raw_input()
 
 
 if __name__=='__main__':
     main()
-
