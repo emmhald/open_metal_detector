@@ -159,8 +159,10 @@ def analyze_structure(filename,uc_params,sfile,cont):
             count_omsites+=1
             oms_index = match_index(str(open_metal_candidate.species[0]),open_metal_candidate.frac_coords[0],system)
             cs = find_coordination_sequence(oms_index, system)
-            unique_site = check_if_unique(cs_list,cs)
-            if len(ads) > 0 and unique_site:
+            print count_omsites,cs
+            oms_id,new_site = find_oms_id(cs_list,cs)
+            site_dict["oms_id"] = oms_id
+            if len(ads) > 0 and new_site:
                 cs_list.append(cs)
                 mof_with_co2=merge_structures(ads,system)
                 cif=CifWriter(ads)
@@ -227,12 +229,12 @@ def analyze_structure(filename,uc_params,sfile,cont):
         json.dump(output_json, outfile,indent=3)
 
 
-def check_if_unique(cs_list,cs):
+def find_oms_id(cs_list,cs):
     '''Check if a given site is unique based on its coordination sequence'''
-    for cs_i in cs_list:
+    for i,cs_i in enumerate(cs_list):
         if compare_lists(cs_i,cs):
-            return False
-    return True
+            return i,False
+    return len(cs_list)+1,True
 
 def compare_lists(l1,l2):
     if len(l1) != len(l2):
@@ -461,7 +463,7 @@ def check_if_open(system):
     if num-1 == 5 and not open_metal_mof:
         open_metal_mof,test,ads=check_metal_dihedrals(system,test)
 
-    print num-1,open_metal_mof,tf
+    #print num-1,open_metal_mof,tf
     #raw_input()
     return open_metal_mof,problematic,test,ads,tf,min_dihid,all_dihidrals
 
@@ -484,7 +486,7 @@ def get_t_factor(system):
         alpha=angles[-2]
         gamma=angles[0]
     elif num-1 ==6:
-        print angles
+        #print angles
         angles_max=[]
         for j in range(1,num):
             if j != max_index:
@@ -530,7 +532,7 @@ def get_t5_factor(a,b):
 
 def get_t6_factor(a,b,c,d,e):
 #    return 1.0-(a-c)/120
-    print 'abcde',a,b,c,d,e
+    #print 'abcde',a,b,c,d,e
 #    print (abs(90.0-(a-b))/180.0)
 #    print (abs(90.0-(a-c))/90.0)
 #    print ((e-d)/180)
@@ -847,7 +849,7 @@ def find_adsorption_site(system,center,prob_dist):
         if min_distance > max_min_dist:
             new_position = probe_pos
             max_min_dist = min_distance
-    print max_min_dist
+    #print max_min_dist
     adsorption_site=[]
     adsorption_pos=[]
     for e,c in zip(system.species,system.frac_coords):
@@ -991,9 +993,9 @@ def find_coordination_sequence(center,structure):
     shell_list = set([(center,(0,0,0))])
     shell_list_prev = set([])
     all_shells = set(shell_list)
-    n_shells = 4
+    n_shells = 6
     cs = []
-    print structure.species[center],structure.cart_coords[center][0],structure.cart_coords[center][1],structure.cart_coords[center][2]
+    #print structure.species[center],structure.cart_coords[center][0],structure.cart_coords[center][1],structure.cart_coords[center][2]
     ele = [(str(structure.species[center]))]
     coords = [ [structure.frac_coords[center][0], structure.frac_coords[center][1], structure.frac_coords[center][2]]]
     coordination_structure = (Structure(structure.lattice,ele,coords))
@@ -1041,7 +1043,6 @@ def find_coordination_sequence(center,structure):
         shell_list = set(c_set)
     #coordination_structure = center_around_metal(coordination_structure)
     write_xyz_file('temp.xyz',coordination_structure)
-    print cs
     return cs
 
 
