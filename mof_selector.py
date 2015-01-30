@@ -399,11 +399,13 @@ def analyse_results(json_dicts,element,output_folder):
 
     count=0
     for json_dict in json_dicts:
+        oms_ids = []
         struc_contains_open_metal = False
         metal_sites = json_dict['metal_sites']
         for ms in metal_sites:
             if ms['is_open'] and  element in ms['metal']:
                 struc_contains_open_metal = True
+            oms_ids.append(ms['oms_type'])
             #if element not in ms['metal']:
             #    struc_contains_open_metal = False
 
@@ -413,6 +415,7 @@ def analyse_results(json_dicts,element,output_folder):
             if not os.path.exists(folder+'/'+struc):
                 os.makedirs(folder+'/'+struc)
             cif_name=struc+'.cif'
+            print cif_name,oms_ids
             print>>summary_ele,struc+'.cif'
             cif=CifParser(cif_folder+cif_name)
             system=cif.get_structures()[0]
