@@ -154,7 +154,7 @@ def analyze_structure(filename,uc_params,sfile,cont, target_folder):
     #ads_all = None
     for m,open_metal_candidate in enumerate(first_coordnation_structure_each_metal):
         site_dict=dict()
-        op,pr,t,ads,tf,min_dih,all_dih = check_if_open(open_metal_candidate)
+        op,pr,t,tf,min_dih,all_dih = check_if_open(open_metal_candidate)
         site_dict["is_open"]=op
         site_dict["t_factor"]=tf
         site_dict["metal"]=str(open_metal_candidate.species[0])
@@ -489,15 +489,14 @@ def check_if_open(system):
             v3=[0,0,0]
             v4=[0,0,0]
         ads=add_co2(v1,v2,v3,v4,system)
-        return open_metal_mof,problematic,test,ads,tf,0.0,0.0
+        return open_metal_mof,problematic,test,tf,0.0,0.0
     ads=[]
-    open_metal_mof, test, ads, min_dihid, all_dihidrals = check_non_metal_dihedrals(system,test)
+    open_metal_mof, test, min_dihid, all_dihidrals = check_non_metal_dihedrals(system,test)
     if num-1 == 5 and not open_metal_mof:
-        open_metal_mof,test,ads=check_metal_dihedrals(system,test)
-
+        open_metal_mof,test
     #print num-1,open_metal_mof,tf
     #raw_input()
-    return open_metal_mof,problematic,test,ads,tf,min_dihid,all_dihidrals
+    return open_metal_mof,problematic,test,tf,min_dihid,all_dihidrals
 
 def get_t_factor(system):
     angles=[]
@@ -624,8 +623,7 @@ def check_metal_dihedrals(system,test):
         v2=system.cart_coords[1]
         v3=system.cart_coords[2]
         v4=system.cart_coords[3]
-        metal_cluster_with_adsorbate=add_co2(v1,v2,v3,v4,system)
-    return open_metal_mof,test,metal_cluster_with_adsorbate
+    return open_metal_mof, test
 
 
 def check_non_metal_dihedrals(system,test):
@@ -706,22 +704,8 @@ def check_non_metal_dihedrals(system,test):
                                             dihedral=abs(system.get_dihedral(0,iii,jjj,kkk))
                                             if abs(dihedral-180)< 10 or abs(dihedral) < tol[test_type]:
                                                 plane_found=[0,iii,jjj,kkk]
-    #if num-1 ==4:
-    #    print 'min_dihedral:',min_dihedral,open_metal_mof
-    metal_cluster_with_adsorbate=[]
-    if open_metal_mof:
-        #if test['plane']:
-        v1=system.cart_coords[plane_found[0]]
-        v2=system.cart_coords[plane_found[1]]
-        v3=system.cart_coords[plane_found[2]]
-        v4=system.cart_coords[plane_found[3]]
-        #elif test['non_TD']:
-        #    v1=system.cart_coords[1]
-        #    v2=system.cart_coords[2]
-        #    v3=system.cart_coords[3]
-        #    v4=system.cart_coords[4]
-        metal_cluster_with_adsorbate=add_co2(v1,v2,v3,v4,system)
-    return open_metal_mof,test,metal_cluster_with_adsorbate,min_dihedral,all_dihedrals
+
+    return open_metal_mof,test,min_dihedral,all_dihedrals
 
 def add_co2(v1,v2,v3,v4,system):
     ads_dist = 2.2
