@@ -161,6 +161,7 @@ def analyze_structure(filename,uc_params,sfile,cont):
             cs = find_coordination_sequence(oms_index, system)
             print count_omsites,cs
             oms_id,new_site = find_oms_id(cs_list,cs)
+            print 'oms_id:',oms_id
             site_dict["oms_id"] = oms_id
             if len(ads) > 0 and new_site:
                 cs_list.append(cs)
@@ -234,7 +235,7 @@ def find_oms_id(cs_list,cs):
     for i,cs_i in enumerate(cs_list):
         if compare_lists(cs_i,cs):
             return i,False
-    return len(cs_list)+1,True
+    return len(cs_list),True
 
 def compare_lists(l1,l2):
     if len(l1) != len(l2):
