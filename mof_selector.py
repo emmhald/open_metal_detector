@@ -17,25 +17,25 @@ import pymatgen.io.smartio as sio
 import pymatgen.io.vaspio.vasp_input as vasp
 import shutil
 from atomic_parameters import atoms
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import numpy as np
 import json
 import re
 from pymatgen.io.smartio import read_structure, write_structure
 
-
 def main():
     output_folder = "output"
-    json_dicts=load_structures(output_folder)
+    json_dicts = load_structures(output_folder)
     #analyze_for_tfac_using_json(json_dicts)
     collect_statistics(json_dicts)
 
-    analyse_results(json_dicts,'Mg',output_folder)
+    #analyse_results(json_dicts,'Fe',output_folder)
+    analyse_results(json_dicts,'Fe',output_folder)
 #    analyze_for_tfac()
 #    for m in atoms().metals:
 #        analyse_results(m)
 #        analyse_results('U')
-    #    print m
+#        print m
 #
     #make_plot()
     #analyse_results_sa()
@@ -56,7 +56,7 @@ def read_json(filename):
 
 
 def load_structures(output_folder):
-    print 'Reading structures...',
+    print('Reading structures...',end=' ')
     json_dicts=[]
     with open('parameters_'+'cif'+'.txt','r') as parameters:
         for l in parameters:
@@ -66,7 +66,7 @@ def load_structures(output_folder):
             if not json_dict:
                 continue
             json_dicts.append(json_dict)
-    print 'Done'
+    print('Done')
     return json_dicts
 
 def analyze_for_tfac_using_json(json_dicts):
@@ -104,10 +104,10 @@ def analyze_for_tfac_using_json(json_dicts):
         for L,typ,tf in zip(num_of_ligands,om_type,tfactors):
             if int(L) > 3 and int(L) < 7:
                 outfile = yes_or_no[typ]+'_'+str(L)
-                print outfile,struc,yes_or_no[typ],tf
-                print>>eval(outfile),struc,yes_or_no[typ],tf
+                print(outfile,struc,yes_or_no[typ],tf)
+                print(struc,yes_or_no[typ],tf,file=eval(outfile))
 
-    print 'okay'
+    print('okay')
     yes_no_list = ['yes','no']
     for yn in yes_no_list:
         for i in range(4,7):
@@ -119,13 +119,13 @@ def analyze_for_tfac_using_json(json_dicts):
                 tfac = l.split(' ')[2].rstrip('\n')
                 tfac_list.append(float(tfac))
             eval(outfile).close()
-            print yn,i
+            print(yn,i)
             if len(tfac_list) > 0:
                 hist, edges = np.histogram(tfac_list,bins=40,range=(0,1),density=True)
                 hist_file = open(tfac_analysis_folder+'/'+outfile+'_hist.out','w')
                 w=(edges[1]-edges[0])/2
                 for e,h in zip(edges,hist):
-                    print>>hist_file,e+w,h
+                    print(e+w,h,file=hist_file)
 
 def collect_statistics(json_dicts):
     count_open=0.0
@@ -157,21 +157,23 @@ def collect_statistics(json_dicts):
         metals = set()
         number_of_linkers = set()
         for ms in metal_sites:
-            metal=ms['metal']
+            metal = ms['metal']
             metals.add(metal)
             if ms['is_open'] :
                 num_of_linkers=ms['number_of_linkers']
                 stats[metal]['count_open_sites']+=1
                 metals_open.add(metal)
                 number_of_linkers.add(num_of_linkers)
+        #stats[metal]['count'] = len(metals)
+        #stats[metal]['count_open'] = len(metals_open)
         for m in metals:
-            stats[metal]['count']+=1
+            stats[m]['count']+=1
         for m in metals_open:
-            stats[metal]['count_open']+=1
+            stats[m]['count_open']+=1
         for l in number_of_linkers:
             #if l < 6 and l > 2:
             if l == 0:
-                print struc
+                print(struc)
             if l > 6:
                 tfrac='tover'
             else:
@@ -191,8 +193,10 @@ def collect_statistics(json_dicts):
         s=stat[1]
         printout=[]
         printout.append(metal)
+        printout.append(s['count'])
         printout.append(s['count_open'])
         printout.append(s['count_open_sites'])
+        #print metal
         percent = 100*float(s['count_open'])/float(s['count'])
         percent_s = "{0:.2f} %".format(percent)
         printout.append(percent_s)
@@ -209,15 +213,15 @@ def collect_statistics(json_dicts):
         #string.center(s, wid)
         printouts.append(printout)
 
-    print "Total MOFs:     ",len(json_dicts)
-    print "Open Metal MOFs: {0:} {1:.2f} %".format(int(count_open),100.0*count_open/len(json_dicts))
-    titles=['Metal','Open-Metal','Open-Metal-Site','Per.-Open','l0','l1','l2','l3','l4','l5','l6','l-over-6']
+    print("Total MOFs:     ",len(json_dicts))
+    print("Open Metal MOFs: {0:} {1:.2f} %".format(int(count_open),100.0*count_open/len(json_dicts)))
+    titles=['Metal','All Found','Open-Metal','Open-Metal-Site','Per.-Open','l0','l1','l2','l3','l4','l5','l6','l-over-6']
     #print "{0:6}{1:12}{2:18}{3:6}{4:6}{5:6}".format(*titles)
-    print "{0:6}{1:^12}{2:^18}{3:^12}{4:^6}{5:^6}{6:^6}{7:^6}{8:^6}{9:^6}{10:^6}{11:^8}".format(*titles)
+    print("{0:6}{1:^12}{2:^18}{3:^12}{4:^12}{5:^6}{6:^6}{7:^6}{8:^6}{9:^6}{10:^6}{11:^8}{12:^8}".format(*titles))
     for p in printouts:
         #print "{0:6}{1:11}{2:15}{3:6}{4:6}{5:6}".format(*p)
         #print "{0:3}{1:6}{2:8}{3:>8}{4:6}{5:6}{6:6}{7:6}{8:6}{9:6}{10:6}{11:6}".format(*p)
-        print "{0:6}{1:^12}{2:^18}{3:^12}{4:^6}{5:^6}{6:^6}{7:^6}{8:^6}{9:^6}{10:^6}{11:^8}".format(*p)
+        print("{0:6}{1:^12}{2:^18}{3:^12}{4:^12}{5:^6}{6:^6}{7:^6}{8:^6}{9:^6}{10:^6}{11:^8}{12:^8}".format(*p))
 
 def keyfunc(tup):
         key, d = tup
@@ -288,11 +292,11 @@ def analyze_for_tfac():
         #            raw_input()
                 if int(L) > 3 and int(L) < 7:
                     outfile=yes_or_no+'_'+str(L)
-                    print outfile,struc,om.lstrip().split(',')[-1]
+                    print(outfile,struc,om.lstrip().split(',')[-1])
                     if filetype==2:
-                        print>>eval(outfile),struc,om.lstrip().split(',')[-1],om.lstrip().split(',')[-2]
+                        print(struc,om.lstrip().split(',')[-1],om.lstrip().split(',')[-2],file=eval(outfile))
                     else:
-                        print>>eval(outfile),struc,om.lstrip().split(',')[-1]
+                        print(struc,om.lstrip().split(',')[-1],file=eval(outfile))
 
     yes_no_list=['yes','no']
     for yn in yes_no_list:
@@ -325,11 +329,11 @@ def make_plot():
         f=int(l.split()[0])
         ele=l.split()[3]
         if f < group and f>0:
-            print f,ele
+            print(f,ele)
             frequency1.append(f)
             elements1.append(ele)
         if f > group and f>0:
-            print f,ele
+            print(f,ele)
             frequency2.append(f)
             elements2.append(ele)
     barPlot(elements1,frequency1,1)
@@ -364,7 +368,7 @@ def analyse_results_sa():
                 sa_f.append(float(line.split(' ')[3]))
                 sa.append(float(line.split(' ')[4]))
             except:
-                print 'no metal found'
+                print('no metal found')
     bins=[]
     for i in xrange(-5,250,5):
         bins.append(i)
@@ -374,55 +378,57 @@ def analyse_results_sa():
     fig = plt.figure(1)
     ind=range(0,nbin-1)
     for i,b in zip(bins,sa_o_hist[0]):
-        print i,b
+        print(i,b)
     raw_input()
     #print len(sa_o_hist[0]),len(ind)
 
     width = 0.5
     ind_shift=[l+width for l in ind]
     #plt.bar(ind_shift, sa_hist[0],color='blue',width=width)
-    plt.bar(ind, sa_o_hist[0],color='red',width=width)
-    plt.show()
+#    plt.bar(ind, sa_o_hist[0],color='red',width=width)
+#    plt.show()
 
 
-def analyse_results(json_dicts,element,output_folder):
+def analyse_results(json_dicts, element, output_folder):
 
     folder = 'analysis/selected_mofs/'+element
-    cif_folder_out='analysis/selected_mofs/'+element+'/cif_files'
+    cif_folder_out = 'analysis/selected_mofs/'+element+'/cif_files'
     if not os.path.exists(folder):
         os.makedirs(folder)
     if not os.path.exists(cif_folder_out):
         os.makedirs(cif_folder_out)
     summary_ele = open(folder+'/summary.out','w')
-    cif_folder=output_folder+'/open_metal_mofs/'
-    summary= open('summary.out','a')
+    cif_folder = output_folder+'/open_metal_mofs/'
+    summary = open('summary.out','a')
 
+    print('MOF','#OMS','#OMS_types','OMS ids','#OMS_per_type')
     count=0
     for json_dict in json_dicts:
         oms_ids = []
         struc_contains_open_metal = False
         metal_sites = json_dict['metal_sites']
+        oms_found = False
+        contains_metal_but_closed = False
         for ms in metal_sites:
-            if ms['is_open'] and  element in ms['metal']:
+            if element in ms['metal'] and not ms['is_open'] :
+                contains_metal_but_closed = True
+            if ms['is_open'] and element in ms['metal']:
                 struc_contains_open_metal = True
-            oms_ids.append(ms['oms_type'])
-            #if element not in ms['metal']:
-            #    struc_contains_open_metal = False
-
+            if 'oms_id' in ms:
+                oms_ids.append(ms['oms_id'])
+        if contains_metal_but_closed:
+            print(json_dict['material_name'],'closed')
         if struc_contains_open_metal:
             count += 1
             struc = json_dict['material_name']
             if not os.path.exists(folder+'/'+struc):
                 os.makedirs(folder+'/'+struc)
-            cif_name=struc+'.cif'
-            print cif_name,oms_ids
-            print>>summary_ele,struc+'.cif'
-            cif=CifParser(cif_folder+cif_name)
-            system=cif.get_structures()[0]
+            cif_name = struc+'.cif'
+            print(cif_name,'-',len(oms_ids),'-',len(set(oms_ids)),'-', oms_ids,'-', *[oms_ids.count(i) for i in set(oms_ids)] )
+            print(struc+'.cif',file=summary_ele)
+            cif = CifParser(cif_folder+cif_name)
+            system = cif.get_structures()[0]
             system.to(fmt='xyz',filename = folder+'/'+struc+'/'+struc+'.xyz')
-            #write_structure(system, folder+'/'+struc+'/'+struc+'.xyz')
-            #sio.write_mol(system,folder+'/'+struc+'/'+struc+'.xyz')
-            #folder+'/summary.out'
             shutil.copyfile(cif_folder+cif_name, folder+'/'+struc+'/'+cif_name)
             shutil.copyfile(cif_folder+cif_name, cif_folder_out+'/'+cif_name)
             dynamics=[]
@@ -430,21 +436,22 @@ def analyse_results(json_dicts,element,output_folder):
                 dynamics.append([False,False,False])
             pos=vasp.Poscar(system,selective_dynamics =dynamics)
             pos.write_file(folder+'/'+struc+'/POSCAR_'+struc)
-            ads_folder='../detect_open_metal_sites/July_2014_runs/output/'+struc
-            om_count=0
-            if 1==2:
-                print 'what'
+            #print(folder+'/'+struc+'/POSCAR_'+struc)
+            #ads_folder='../detect_open_metal_sites/July_2014_runs/output/'+struc
+            ads_folder=output_folder+'/'+struc
+            om_count = -1
+            if 1 == 1:
                 while True:
                     om_count+=1
-                    ads_file=struc+'_first_coordination_sphere_with_ads'+str(om_count)+'.cif'
-                    ads_path=ads_folder+'/'+ads_file
+                    ads_file = struc+'_first_coordination_sphere_with_ads'+str(om_count)+'.cif'
+                    ads_path = ads_folder+'/'+ads_file
                     if not os.path.isfile(ads_path):
                         break
                     cif=CifParser(ads_path)
                     try:
                         system_ads=cif.get_structures()[0]
                     except:
-                        print 'Cannot read ads cif file'
+                        print('Cannot read ads cif file')
                         continue
                     shutil.copyfile(ads_path, folder+'/'+struc+'/'+ads_file)
                     dynamics=[]
@@ -457,15 +464,14 @@ def analyse_results(json_dicts,element,output_folder):
                             dist=system.lattice.get_all_distances(c,cs)
                             if es == e and dist < 0.5:
                                 dynamics[i]=([False,False,False])
-
                     #for atom1 in range(0,system_ads[0].num_sites):
                     #    for atom2 in range(0,system[0].num_sites):
                     #        system.lattice.get_all_distances(m_f_coor,structure.frac_coords)
                     pos=vasp.Poscar(system_ads,selective_dynamics =dynamics)
                     pos.write_file(folder+'/'+struc+'/POSCAR_'+ads_file)
 
-    print count,' MOFs with ',element,' open metal sites were found'
-    print>>summary, count,' MOFs with ',element,' open metal sites were found'
+    print(count,' MOFs with ',element,' open metal sites were found')
+    print(count,' MOFs with ',element,' open metal sites were found',file=summary)
 
 
 
