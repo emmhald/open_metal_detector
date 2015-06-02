@@ -167,7 +167,7 @@ def analyze_structure(filename,uc_params,sfile,cont, target_folder):
         if op:
             count_omsites+=1
             oms_index = match_index(str(open_metal_candidate.species[0]),open_metal_candidate.frac_coords[0],system)
-            #site_dict["oms_id"],cs_list = unique_site(oms_index, system, cs_list, output_folder, mof_name)
+            site_dict["oms_id"],cs_list = unique_site(oms_index, system, cs_list, output_folder, mof_name)
             #cs = find_coordination_sequence(oms_index, system)
             #oms_id, new_site = find_oms_id(cs_list,cs)
             #site_dict["oms_id"] = oms_id
@@ -252,14 +252,26 @@ def unique_site(oms_index, system, cs_list, output_folder, mof_name):
 
     if new_site:
         print('New site found')
-        ads = add_co2_simple(system, oms_index)
         cs_list.append(cs)
+
+
+        end_to_end = 2.32
+        eles = ['O', 'O', 'C']
+        ads = add_co2_simple(system, oms_index, end_to_end, eles)
         mof_with_co2 = merge_structures(ads,system)
         cif = CifWriter(ads)
-        #cif.write_file(output_folder+'/'+mof_name+'_ads'+str(count_omsites)+'.cif')
-        cif.write_file(output_folder+'/'+mof_name+'_ads'+str(oms_id)+'.cif')
+        cif.write_file(output_folder+'/'+mof_name+'_co2_'+str(oms_id)+'.cif')
         cif = CifWriter(mof_with_co2)
-        cif.write_file(output_folder+'/'+mof_name+'_first_coordination_sphere_with_ads'+str(oms_id)+'.cif')
+        cif.write_file(output_folder+'/'+mof_name+'_first_coordination_sphere_with_co2_'+str(oms_id)+'.cif')
+
+        end_to_end = 1.1
+        eles = ['N', 'N']
+        ads = add_co2_simple(system, oms_index, end_to_end, eles)
+        mof_with_co2 = merge_structures(ads,system)
+        cif = CifWriter(ads)
+        cif.write_file(output_folder+'/'+mof_name+'_n2_'+str(oms_id)+'.cif')
+        cif = CifWriter(mof_with_co2)
+        cif.write_file(output_folder+'/'+mof_name+'_first_coordination_sphere_with_n2_'+str(oms_id)+'.cif')
     return oms_id, cs_list
 
 def find_oms_id(cs_list,cs):
@@ -743,35 +755,41 @@ def add_co2(v1,v2,v3,v4,system):
         #co2_vector_C = [i+j for i,j in zip(pos, co2_vector_O)]
     #return add_co2_simple(system, 0)
 
-def add_co2_simple(structure, oms_index):
+def add_co2_simple(structure, oms_index, end_to_end, eles):
 
     ads_dist = 2.2
+    #end_to_end = 2.32
+    bond = end_to_end/2
+    #eles = ['O', 'O', 'C']
     adsorption_site = []
     adsorption_pos = []
-    co2_vector_O = find_adsorption_site(structure,structure.cart_coords[oms_index],2.2)
-    co2_vector_O_2 = find_adsorption_site(structure,co2_vector_O,  2.32) # 1.16)
-    r = [i-j for i,j in zip(co2_vector_O_2, co2_vector_O)]
-    r_l = np.linalg.norm(np.array(r))
-    r = [i/r_l for i in r]
-    pos = list(rr*1.16 for rr in r)
-    co2_vector_C = [j-i for i,j in zip(pos, co2_vector_O_2)]
+    ads_vector = []
+    ads_vector_f = []
 
-    p_avg_f = structure.lattice.get_fractional_coords(co2_vector_O)
-    co2_vector_C_f = structure.lattice.get_fractional_coords(co2_vector_C)
-    co2_vector_O_f = structure.lattice.get_fractional_coords(co2_vector_O_2)
+    ads_vector.append(find_adsorption_site(structure,structure.cart_coords[oms_index], ads_dist))
+    ads_vector.append(find_adsorption_site(structure, ads_vector[0],  end_to_end))
+    if len(eles) > 2:
+        r = [i-j for i,j in zip(ads_vector[1], ads_vector[0])]
+        r_l = np.linalg.norm(np.array(r))
+        r_unit = [i/r_l for i in r]
+        pos = list(rr*bond for rr in r_unit)
+        ads_vector.append([j-i for i,j in zip(pos, ads_vector[1])])
 
-    adsorption_site.append('O')
-    adsorption_pos.append(p_avg_f)
-    adsorption_site.append('C')
-    adsorption_pos.append(co2_vector_C_f)
-    adsorption_site.append('O')
-    adsorption_pos.append(co2_vector_O_f)
+    ads_vector_f = [ structure.lattice.get_fractional_coords(ads_v) for ads_v in ads_vector]
 
+    #ads_vector_f.append(structure.lattice.get_fractional_coords(ads_vector[0]))
+    #ads_vector_f.append(structure.lattice.get_fractional_coords(ads_vector[1]))
+    #ads_vector_f.append(structure.lattice.get_fractional_coords(ads_vector[2]))
+
+    for e in eles:
+        adsorption_site.append(e)
+    for a in ads_vector_f:
+        adsorption_pos.append(a)
     dists=[]
     for s,p in zip(adsorption_site,adsorption_pos):
         dists.append(min(structure.lattice.get_all_distances(p,structure.frac_coords)[0]))
     print('Min CO2 distance from framework:',min(dists),max(dists))
-    return Structure(structure.lattice,adsorption_site,adsorption_pos)
+    return Structure(structure.lattice, adsorption_site, adsorption_pos)
 
 def calc_plane(x, y, z):
     v1 = [y[0] - x[0], y[1] - x[1], y[2] - x[2]]
