@@ -815,7 +815,6 @@ def check_if_plane_on_metal(m_i, indeces, system):
                 else:
                     dihedral=abs(system.get_dihedral(m_i,indeces[i],indeces[j],indeces[k]))
                     if abs(dihedral-crit)< tol or abs(dihedral-crit+180)< tol:
-                        print(dihedral-crit)
                         return True
     return False
 
