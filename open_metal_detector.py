@@ -36,12 +36,14 @@ def main():
     parser.add_argument('-s','--summary_file', nargs='?',help='Name of summary file', default='summary.out')
     parser.add_argument('-f','--folder_in', nargs='?',help='Folder with structure files')
     parser.add_argument('--continue_run', dest='continue_run', action='store_true')
+    parser.add_argument('--attach_sorbate', dest='attach_sorbate', action='store_true')
     parser.add_argument('-m','--max_structures', nargs='?',default=10000000,const=10000000, type=int, help='The maximum number of structures to run')
     parser.set_defaults(continue_run=False)
 
     #target_folder='CORE-MOF-DB-June2014/'
     args=parser.parse_args()
     cont=args.continue_run
+    attach_ads = args.atatch_sorbate
     params_filename=args.parameter_file
     target_folder=args.folder_in+'/'
     number_of_structures=args.max_structures
@@ -59,7 +61,7 @@ def main():
             if filename.split('.')[0]=='xyz':
                 for j in range(1,7):
                     uc_params.append(float(line_elements[j]))
-            analyze_structure(filename, uc_params, sfile, cont, target_folder)
+            analyze_structure(filename, uc_params, sfile, cont, target_folder, attach_ads)
             t1s = time.time()
             print('Time:',t1s-t0s)
             if i+1 >= number_of_structures:
@@ -92,7 +94,7 @@ def delete_folder(folder_path):
             else:
                 shutil.rmtree(file_object_path)
 
-def analyze_structure(filename,uc_params,sfile,cont, target_folder):
+def analyze_structure(filename,uc_params,sfile,cont, target_folder, attach_ads):
 
     mof_name=filename.split('.')[0]
     output_folder='output/'+mof_name
@@ -104,6 +106,7 @@ def analyze_structure(filename,uc_params,sfile,cont, target_folder):
     make_folder(output_folder)
     make_folder('output/open_metal_mofs')
     make_folder('output/problematic_metal_mofs')
+    cont=args.continue_run
 
     open_metal_mofs = open('output/open_metal_mofs.out','a')
     problematic_mofs = open('output/problematic.out','a')
@@ -167,7 +170,7 @@ def analyze_structure(filename,uc_params,sfile,cont, target_folder):
         if op:
             count_omsites+=1
             oms_index = match_index(str(open_metal_candidate.species[0]),open_metal_candidate.frac_coords[0],system)
-            site_dict["oms_id"],cs_list = unique_site(oms_index, system, cs_list, output_folder, mof_name)
+            site_dict["oms_id"],cs_list = unique_site(oms_index, system, cs_list, output_folder, mof_name, attach_ads)
             #cs = find_coordination_sequence(oms_index, system)
             #oms_id, new_site = find_oms_id(cs_list,cs)
             #site_dict["oms_id"] = oms_id
@@ -245,7 +248,7 @@ def analyze_structure(filename,uc_params,sfile,cont, target_folder):
     with open(json_file_out, 'w') as outfile:
         json.dump(output_json, outfile,indent=3)
 
-def unique_site(oms_index, system, cs_list, output_folder, mof_name):
+def unique_site(oms_index, system, cs_list, output_folder, mof_name, add_ads):
     cs = find_coordination_sequence(oms_index, system)
     oms_id, new_site = find_oms_id(cs_list, cs)
     #site_dict["oms_id"] = oms_id
@@ -254,24 +257,24 @@ def unique_site(oms_index, system, cs_list, output_folder, mof_name):
         print('New site found')
         cs_list.append(cs)
 
+        if add_ads:
+            end_to_end = 2.32
+            eles = ['O', 'O', 'C']
+            ads = add_co2_simple(system, oms_index, end_to_end, eles)
+            mof_with_co2 = merge_structures(ads,system)
+            cif = CifWriter(ads)
+            cif.write_file(output_folder+'/'+mof_name+'_co2_'+str(oms_id)+'.cif')
+            cif = CifWriter(mof_with_co2)
+            cif.write_file(output_folder+'/'+mof_name+'_first_coordination_sphere_with_co2_'+str(oms_id)+'.cif')
 
-        end_to_end = 2.32
-        eles = ['O', 'O', 'C']
-        ads = add_co2_simple(system, oms_index, end_to_end, eles)
-        mof_with_co2 = merge_structures(ads,system)
-        cif = CifWriter(ads)
-        cif.write_file(output_folder+'/'+mof_name+'_co2_'+str(oms_id)+'.cif')
-        cif = CifWriter(mof_with_co2)
-        cif.write_file(output_folder+'/'+mof_name+'_first_coordination_sphere_with_co2_'+str(oms_id)+'.cif')
-
-        end_to_end = 1.1
-        eles = ['N', 'N']
-        ads = add_co2_simple(system, oms_index, end_to_end, eles)
-        mof_with_co2 = merge_structures(ads,system)
-        cif = CifWriter(ads)
-        cif.write_file(output_folder+'/'+mof_name+'_n2_'+str(oms_id)+'.cif')
-        cif = CifWriter(mof_with_co2)
-        cif.write_file(output_folder+'/'+mof_name+'_first_coordination_sphere_with_n2_'+str(oms_id)+'.cif')
+            end_to_end = 1.1
+            eles = ['N', 'N']
+            ads = add_co2_simple(system, oms_index, end_to_end, eles)
+            mof_with_co2 = merge_structures(ads,system)
+            cif = CifWriter(ads)
+            cif.write_file(output_folder+'/'+mof_name+'_n2_'+str(oms_id)+'.cif')
+            cif = CifWriter(mof_with_co2)
+            cif.write_file(output_folder+'/'+mof_name+'_first_coordination_sphere_with_n2_'+str(oms_id)+'.cif')
     return oms_id, cs_list
 
 def find_oms_id(cs_list,cs):
