@@ -299,21 +299,21 @@ def find_coord_sphere(center, structure):
         first_coordnation_list_coords = []
         coord_sphere = []
         for i,dis in enumerate(dist[0]):
-            bond_tol = get_bond_tolerance(str(structure.species[center]),str(structure.species[i]))*increase
-            if bond_check(str(structure.species[center]),str(structure.species[i]),dis,bond_tol):
+            bond_tol = ap.get_bond_tolerance(str(structure.species[center]),str(structure.species[i]))*increase
+            if ap.bond_check(str(structure.species[center]), str(structure.species[i]), dis, bond_tol):
                 first_coordnation_list_species.append(structure.species[i])
                 first_coordnation_list_coords.append(structure.frac_coords[i])
                 coord_sphere.append(i)
                 bonds_found+=1
-        check_structure = Structure(structure.lattice,first_coordnation_list_species,first_coordnation_list_coords)
-        if check_if_valid_bonds(check_structure,bond_tol,increase):
+        check_structure = Structure(structure.lattice, first_coordnation_list_species, first_coordnation_list_coords)
+        if ap.check_if_valid_bonds(check_structure, bond_tol, increase):
             break
         else:
-            increase-=0.1
+            increase -= 0.1
             if increase < 0 :
                 print('something went terribly wrong')
                 raw_input()
-        #    print 'Increasing bond_tolerance by ',increase
+            #print('Increasing bond_tolerance by ',increase)
     return coord_sphere, check_structure
 
 def find_first_coordination_sphere(metal, structure_full):
@@ -340,15 +340,15 @@ def find_first_coordination_sphere(metal, structure_full):
             first_coordnation_list_species=[]
             first_coordnation_list_coords=[]
             for i,dis in enumerate(dist[0]):
-                bond_tol = get_bond_tolerance(str(metal.species[m]),str(structure.species[i]))*increase
-                if bond_check(str(metal.species[m]),str(structure.species[i]),dis,bond_tol):
+                bond_tol = ap.get_bond_tolerance(str(metal.species[m]),str(structure.species[i]))*increase
+                if ap.bond_check(str(metal.species[m]),str(structure.species[i]),dis,bond_tol):
                     first_coordnation_list_species.append(structure.species[i])
                     first_coordnation_list_coords.append(structure.frac_coords[i])
                     bonds_found+=1
             #if check_if_enough_bonds(bonds_found,increase,str(metal.species[m])):
-            check_structure=Structure(metal.lattice,first_coordnation_list_species,first_coordnation_list_coords)
+            check_structure = Structure(metal.lattice,first_coordnation_list_species,first_coordnation_list_coords)
             #print increase,bond_tol,bonds_found
-            if check_if_valid_bonds(check_structure,bond_tol,increase):
+            if ap.check_if_valid_bonds(check_structure,bond_tol,increase):
                 break
             else:
                 increase-=0.5
@@ -363,29 +363,15 @@ def find_first_coordination_sphere(metal, structure_full):
         first_coordnation_structure_each_metal[m]=center_around_metal(first_coordnation_structure_each_metal[m])
     return first_coordination_structure, first_coordnation_structure_each_metal
 
-def check_if_enough_bonds(bonds_found,increase,metal):
-    if ap.is_lanthanide_or_actinide(metal):
-        min_bonds=5
-    else:
-        min_bonds=4
-    if bonds_found  < min_bonds and increase <= 1.5:
-        return False
-    else:
-        return True
-
-def check_if_valid_bonds(ligands, bond_tol, increase):
-    if increase > 0.05:
-        for l,fc in enumerate(ligands.frac_coords):
-            dist = ligands.lattice.get_all_distances(fc,ligands.frac_coords)
-            count_bonds=0
-            for i, dis in enumerate(dist[0]):
-                if i != l:
-                    if bond_check(str(ligands.species[l]),str(ligands.species[i]),dis,bond_tol) and not ( str(ligands.species[l]) == 'C' and str(ligands.species[i]) == 'C'):
-                        count_bonds += 1
-            if count_bonds > 0:
-                return False
-    return True
-
+#def check_if_enough_bonds(bonds_found,increase,metal):
+#    if ap.is_lanthanide_or_actinide(metal):
+#        min_bonds=5
+#    else:
+#        min_bonds=4
+#    if bonds_found  < min_bonds and increase <= 1.5:
+#        return False
+#    else:
+#        return True
 
 def make_system_from_cif(ciffile):
     cif=CifParser(ciffile)
@@ -456,24 +442,12 @@ def check_if_open(system):
         open_metal_mof = True
         problematic = True
         test['4_or_less'] = True
-        if num-1 > 2:
-            v1=system.cart_coords[0]
-            v2=system.cart_coords[1]
-            v3=system.cart_coords[2]
-            v4=system.cart_coords[2]
-        else:
-            v1=[0,0,0]
-            v2=[0,0,0]
-            v3=[0,0,0]
-            v4=[0,0,0]
-        ads=add_co2(v1,v2,v3,v4,system)
         return open_metal_mof,problematic,test,tf,0.0,0.0
-    ads=[]
+
     open_metal_mof, test, min_dihid, all_dihidrals = check_non_metal_dihedrals(system,test)
+
     if num-1 == 5 and not open_metal_mof:
         open_metal_mof,test
-    #print num-1,open_metal_mof,tf
-    #raw_input()
     return open_metal_mof,problematic,test,tf,min_dihid,all_dihidrals
 
 def get_t_factor(system):
@@ -588,13 +562,8 @@ def check_metal_dihedrals(system,test):
             print('conflicting criteria')
             raw_input()
         else:
-            open_metal_mof=False
-    metal_cluster_with_adsorbate=[]
-    if open_metal_mof and test['metal_plane']:
-        v1=system.cart_coords[0]
-        v2=system.cart_coords[1]
-        v3=system.cart_coords[2]
-        v4=system.cart_coords[3]
+            open_metal_mof = False
+
     return open_metal_mof, test
 
 def check_non_metal_dihedrals(system,test):
@@ -733,6 +702,21 @@ def add_co2_simple(structure, oms_index, end_to_end, eles):
     print('Min adsorbate distance from framework:',min(dists),max(dists))
     return Structure(structure.lattice, adsorption_site, adsorption_pos)
 
+def find_adsorption_site(system,center,prob_dist):
+    #find the adsorption site by maximizing the distance from all the atoms while
+    #keep the distance fixed at some predefined distace
+    tries = 10000
+    sum_distance = []
+    probe_positions = []
+    for i in range(0,tries):
+        #probe_pos=generate_random_position(system.cart_coords[0],center,(prob_dist)-atom.get_vdf_radius(center_e))
+        probe_pos = generate_random_position(center,prob_dist)
+        probe_pos_f=system.lattice.get_fractional_coords(probe_pos)
+        sum_distance.append(sum([1.0/(r**12) for r in system.lattice.get_all_distances(probe_pos_f,system.frac_coords)[0]]))
+        probe_positions.append(probe_pos)
+    new_position = probe_positions[sum_distance.index(min(sum_distance))]
+    return new_position
+
 def calc_plane(x, y, z):
     v1 = [y[0] - x[0], y[1] - x[1], y[2] - x[2]]
     v2 = [z[0] - x[0], z[1] - x[1], z[2] - x[2]]
@@ -802,30 +786,6 @@ def center_around_metal(system):
         system_centered.append(system.species[i],c_i_centered)
     return system_centered
 
-def bond_check(ele1,ele2,dist,bond_tol):
-    #bond = dist #- get_sum_of_cov_radii(ele1,ele2)
-    up_bound = get_sum_of_cov_radii(ele1,ele2) + bond_tol
-    low_bound = get_sum_of_cov_radii(ele1,ele2) - bond_tol
-    #if bond < bond_tol and abs(dist) > 0:
-    if dist < up_bound : #and dist > low_bound: # and abs(dist) > 0:
-        return True
-    else:
-        return False
-
-def find_adsorption_site(system,center,prob_dist):
-    #find the adsorption site by maximizing the distance from all the atoms while
-    #keep the distance fixed at some predefined distace
-    tries = 10000
-    sum_distance = []
-    probe_positions = []
-    for i in range(0,tries):
-        #probe_pos=generate_random_position(system.cart_coords[0],center,(prob_dist)-atom.get_vdf_radius(center_e))
-        probe_pos = generate_random_position(center,prob_dist)
-        probe_pos_f=system.lattice.get_fractional_coords(probe_pos)
-        sum_distance.append(sum([1.0/(r**12) for r in system.lattice.get_all_distances(probe_pos_f,system.frac_coords)[0]]))
-        probe_positions.append(probe_pos)
-    new_position = probe_positions[sum_distance.index(min(sum_distance))]
-    return new_position
 
 def merge_structures(s1,s2):
     sites=[]
@@ -839,9 +799,6 @@ def merge_structures(s1,s2):
     if s1.lattice != s2.lattice:
         sys.exit('Trying to merger two structures with different lattices')
     return Structure(s1.lattice,sites,posistions)
-
-def get_sum_of_cov_radii(ele1,ele2):
-    return ap.get_covelent_radius(ele1)+ap.get_covelent_radius(ele2)
 
 def get_metal_surface_areas(metal,system):
     sa_list=[]
@@ -928,23 +885,6 @@ def generate_random_vector():
     ran_vec.append(zeta2*ranh)
     ran_vec.append(1.0-2.0*zeta_sq)
     return ran_vec
-
-def get_bond_tolerance(ele1,ele2):
-    if check_if_heavy_metal_bond(ele1,ele2):
-        return 0.2
-    else:
-        return 0.4
-
-def check_if_heavy_metal_bond(ele1,ele2):
-    if is_heavy_metal(ele1) or is_heavy_metal(ele2):
-        return True
-    else:
-        return False
-def is_heavy_metal(ele): #\m/
-    if ap.get_covelent_radius(ele) > 1.95:
-         return True
-    else:
-        return False
 
 def find_coordination_sequence(center, structure):
     '''computes the coordination sequence up to the Nth coordination shell
