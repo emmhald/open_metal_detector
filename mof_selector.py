@@ -22,15 +22,23 @@ import numpy as np
 import json
 import re
 from pymatgen.io.smartio import read_structure, write_structure
+import argparse
 
 def main():
-    output_folder = "output"
-    json_dicts = load_structures(output_folder)
+    parser = argparse.ArgumentParser(description='Split file into batches')
+    parser.add_argument('-p','--parameter_file', nargs='?',help='Name of parameters file', default = 'parameters.txt')
+    parser.add_argument('-o','--output_folder', nargs='?',help='Name of output folder', default = 'output')
+    parser.add_argument('-e','--target_element', nargs='?',help='Specify element to collect structures containing it', default = None)
+
+    args = parser.parse_args()
+    output_folder = args.output_folder
+    parameters_file = args.parameter_file
+    ele = args.target_element
+    json_dicts = load_structures(output_folder, parameters_file)
     #analyze_for_tfac_using_json(json_dicts)
     collect_statistics(json_dicts)
-
-    #analyse_results(json_dicts,'Fe',output_folder)
-    analyse_results(json_dicts,'Fe',output_folder)
+    if ele:
+        analyse_results(json_dicts, ele, output_folder)
 #    analyze_for_tfac()
 #    for m in atoms().metals:
 #        analyse_results(m)
@@ -55,10 +63,10 @@ def read_json(filename):
     return json_dict
 
 
-def load_structures(output_folder):
+def load_structures(output_folder, parameter_file):
     print('Reading structures...',end=' ')
     json_dicts=[]
-    with open('parameters_'+'cif'+'.txt','r') as parameters:
+    with open(parameter_file, 'r') as parameters:
         for l in parameters:
             struc = l.split('.')[0]
     #        print struc
@@ -439,36 +447,34 @@ def analyse_results(json_dicts, element, output_folder):
             #print(folder+'/'+struc+'/POSCAR_'+struc)
             #ads_folder='../detect_open_metal_sites/July_2014_runs/output/'+struc
             ads_folder=output_folder+'/'+struc
-            om_count = -1
             if 1 == 1:
-                while True:
-                    om_count+=1
-                    ads_file = struc+'_first_coordination_sphere_with_ads'+str(om_count)+'.cif'
-                    ads_path = ads_folder+'/'+ads_file
-                    if not os.path.isfile(ads_path):
-                        break
-                    cif=CifParser(ads_path)
-                    try:
-                        system_ads=cif.get_structures()[0]
-                    except:
-                        print('Cannot read ads cif file')
-                        continue
-                    shutil.copyfile(ads_path, folder+'/'+struc+'/'+ads_file)
-                    dynamics=[]
-                    for atom in range(0,system_ads.num_sites):
-                        dynamics.append([True,True,True])
-                    i=-1
-                    for e,c in zip(system_ads.species,system_ads.frac_coords):
-                        i+=1
-                        for es,cs in zip(system.species,system.frac_coords):
-                            dist=system.lattice.get_all_distances(c,cs)
-                            if es == e and dist < 0.5:
-                                dynamics[i]=([False,False,False])
-                    #for atom1 in range(0,system_ads[0].num_sites):
-                    #    for atom2 in range(0,system[0].num_sites):
-                    #        system.lattice.get_all_distances(m_f_coor,structure.frac_coords)
-                    pos=vasp.Poscar(system_ads,selective_dynamics =dynamics)
-                    pos.write_file(folder+'/'+struc+'/POSCAR_'+ads_file)
+                for ads_type in ['co2', 'n2']:
+                    om_count = -1
+                    while True:
+                        om_count+=1
+                        ads_file = struc+'_first_coordination_sphere_with_'+ads_type+'_'+str(om_count)+'.cif'
+                        ads_path = ads_folder+'/'+ads_file
+                        if not os.path.isfile(ads_path):
+                            break
+                        cif=CifParser(ads_path)
+                        try:
+                            system_ads=cif.get_structures()[0]
+                        except:
+                            print('Cannot read ads cif file')
+                            continue
+                        shutil.copyfile(ads_path, folder+'/'+struc+'/'+ads_file)
+                        dynamics=[]
+                        for atom in range(0,system_ads.num_sites):
+                            dynamics.append([True,True,True])
+                        i=-1
+                        for e,c in zip(system_ads.species,system_ads.frac_coords):
+                            i+=1
+                            for es,cs in zip(system.species,system.frac_coords):
+                                dist=system.lattice.get_all_distances(c,cs)
+                                if es == e and dist < 0.5:
+                                    dynamics[i]=([False,False,False])
+                        pos=vasp.Poscar(system_ads,selective_dynamics =dynamics)
+                        pos.write_file(folder+'/'+struc+'/POSCAR_'+ads_file)
 
     print(count,' MOFs with ',element,' open metal sites were found')
     print(count,' MOFs with ',element,' open metal sites were found',file=summary)
