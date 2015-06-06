@@ -31,37 +31,39 @@ import yappi
 
 def main():
 
-    parser = argparse.ArgumentParser(description='Split file into batches')
-    parser.add_argument('-p','--parameter_file', nargs='?',help='Name of parameters file', default='parameters.txt')
-    parser.add_argument('-s','--summary_file', nargs='?',help='Name of summary file', default='summary.out')
-    parser.add_argument('-f','--folder_in', nargs='?',help='Folder with structure files')
+    parser = argparse.ArgumentParser(description = 'Split file into batches')
+    parser.add_argument('-p','--parameter_file', nargs = '?',help='Name of parameters file', default = 'parameters.txt')
+    parser.add_argument('-s','--summary_file', nargs = '?',help='Name of summary file', default = 'summary.out')
+    parser.add_argument('-f','--folder_in', nargs = '?',help='Folder with structure files', default = 'CORE-MOF-DB-June2014')
+    parser.add_argument('-o','--folder_out', nargs = '?',help='Folder with structure files', default = 'output')
     parser.add_argument('--continue_run', dest='continue_run', action='store_true')
     parser.add_argument('--attach_sorbate', dest='attach_sorbate', action='store_true')
     parser.add_argument('-m','--max_structures', nargs='?',default=10000000,const=10000000, type=int, help='The maximum number of structures to run')
     parser.set_defaults(continue_run = False)
     parser.set_defaults(attach_sorbate = False)
 
-    args=parser.parse_args()
-    cont=args.continue_run
+    args = parser.parse_args()
+    cont = args.continue_run
     attach_ads = args.attach_sorbate
-    params_filename=args.parameter_file
-    target_folder=args.folder_in+'/'
-    number_of_structures=args.max_structures
-    sfile=args.summary_file
+    params_filename = args.parameter_file
+    source_folder = args.folder_in+'/'
+    target_folder = args.folder_out+'/'
+    number_of_structures = args.max_structures
+    sfile = args.summary_file
 
     t0 = time.time()
     with open(params_filename,'r') as params_file:
         if not cont:
-            clear_files(sfile,cont)
+            clear_files(sfile,cont, target_folder)
         for i,struc in enumerate(params_file):
             t0s = time.time()
             uc_params=[]
             line_elements=shlex.split(struc)
             filename=line_elements[0]
-            if filename.split('.')[0]=='xyz':
+            if filename.split('.')[0] == 'xyz':
                 for j in range(1,7):
                     uc_params.append(float(line_elements[j]))
-            analyze_structure(filename, uc_params, sfile, cont, target_folder, attach_ads)
+            analyze_structure(filename, uc_params, sfile, cont, source_folder, target_folder, attach_ads)
             t1s = time.time()
             print('Time:',t1s-t0s)
             if i+1 >= number_of_structures:
@@ -71,9 +73,9 @@ def main():
         print('Total Time',t1-t0)
 
 
-def clear_files(sfile,cont):
+def clear_files(sfile, cont, target_folder):
     make_folder('output')
-    file_type='w'
+    file_type = 'w'
     open_metal_mofs = open('output/open_metal_mofs.out',file_type)
     problematic_mofs = open('output/problematic.out',file_type)
     summary_mofs= open('output/'+sfile,file_type)
@@ -94,26 +96,26 @@ def delete_folder(folder_path):
             else:
                 shutil.rmtree(file_object_path)
 
-def analyze_structure(filename, uc_params, sfile, cont, target_folder, attach_ads):
+def analyze_structure(filename, uc_params, sfile, cont, source_folder, target_folder, attach_ads):
 
     mof_name = filename.split('.')[0]
-    output_folder = 'output/'+mof_name
+    output_folder = target_folder+mof_name
     json_file_out = output_folder+'/'+mof_name+'.json'
     if cont and os.path.exists(json_file_out):
         print(mof_name,'has run already... skipping')
         return
     delete_folder(output_folder)
     make_folder(output_folder)
-    make_folder('output/open_metal_mofs')
-    make_folder('output/problematic_metal_mofs')
+    make_folder(target_folder+'open_metal_mofs')
+    make_folder(target_folder+'problematic_metal_mofs')
 
-    open_metal_mofs = open('output/open_metal_mofs.out','a')
-    problematic_mofs = open('output/problematic.out','a')
-    summary_mofs = open('output/'+sfile,'a')
+    open_metal_mofs = open(target_folder+'open_metal_mofs.out','a')
+    problematic_mofs = open(target_folder+'problematic.out','a')
+    summary_mofs = open(target_folder+sfile,'a')
     filetype = filename.split('.')[-1]
     if filetype=='xyz':
         xyz = xyz_file()
-        xyz.filename_in = target_folder+filename #mof_name+'.xyz'
+        xyz.filename_in = source_folder+filename #mof_name+'.xyz'
         if not os.path.isfile(xyz.filename_in):
             print('File not found',xyz.filename_in)
             return
@@ -121,7 +123,7 @@ def analyze_structure(filename, uc_params, sfile, cont, target_folder, attach_ad
         xyz.open()
         lattice, system = make_system_from_xyz(xyz)
     elif filetype == 'cif':
-        lattice, system = make_system_from_cif(target_folder+filename)
+        lattice, system = make_system_from_cif(source_folder+filename)
     else:
         sys.exit('Do not know this filetype')
 
@@ -165,13 +167,13 @@ def analyze_structure(filename, uc_params, sfile, cont, target_folder, attach_ad
     #if open_metal_site:
     if output_json['metal_sites_found']:
         print(summary, end="", file = open_metal_mofs)
-        shutil.copyfile(target_folder+filename, 'output/open_metal_mofs/'+filename)
+        shutil.copyfile(source_folder+filename, target_folder+'open_metal_mofs/'+filename)
     print(summary, end="\n", file = summary_mofs)
 
     #if problematic_structure:
     if output_json['problematic'] :
         print(mof_name, end="", file = problematic_mofs)
-        shutil.copyfile(target_folder+filename, 'output/problematic_metal_mofs/'+filename)
+        shutil.copyfile(source_folder+filename, target_folder+'problematic_metal_mofs/'+filename)
 
     write_xyz_file(output_folder+'/'+mof_name+'_metal.xyz',metal)
     write_xyz_file(output_folder+'/'+mof_name+'_organic.xyz',organic)
