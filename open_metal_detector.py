@@ -94,11 +94,11 @@ def delete_folder(folder_path):
             else:
                 shutil.rmtree(file_object_path)
 
-def analyze_structure(filename,uc_params,sfile,cont, target_folder, attach_ads):
+def analyze_structure(filename, uc_params, sfile, cont, target_folder, attach_ads):
 
-    mof_name=filename.split('.')[0]
-    output_folder='output/'+mof_name
-    json_file_out=output_folder+'/'+mof_name+'.json'
+    mof_name = filename.split('.')[0]
+    output_folder = 'output/'+mof_name
+    json_file_out = output_folder+'/'+mof_name+'.json'
     if cont and os.path.exists(json_file_out):
         print(mof_name,'has run already... skipping')
         return
@@ -106,82 +106,70 @@ def analyze_structure(filename,uc_params,sfile,cont, target_folder, attach_ads):
     make_folder(output_folder)
     make_folder('output/open_metal_mofs')
     make_folder('output/problematic_metal_mofs')
-    #cont=args.continue_run
 
     open_metal_mofs = open('output/open_metal_mofs.out','a')
     problematic_mofs = open('output/problematic.out','a')
     summary_mofs = open('output/'+sfile,'a')
-    filetype=filename.split('.')[-1]
+    filetype = filename.split('.')[-1]
     if filetype=='xyz':
-        #print 'Reading Xyzs'
-        xyz=xyz_file()
-        xyz.filename_in=target_folder+filename #mof_name+'.xyz'
+        xyz = xyz_file()
+        xyz.filename_in = target_folder+filename #mof_name+'.xyz'
         if not os.path.isfile(xyz.filename_in):
             print('File not found',xyz.filename_in)
             return
         xyz.load_parameters(uc_params)
         xyz.open()
-        lattice,system=make_system_from_xyz(xyz)
-    elif filetype=='cif':
-        #print 'Reading Cifs'
-        lattice,system=make_system_from_cif(target_folder+filename)
+        lattice, system = make_system_from_xyz(xyz)
+    elif filetype == 'cif':
+        lattice, system = make_system_from_cif(target_folder+filename)
     else:
         sys.exit('Do not know this filetype')
 
-    print("\n",filename)
+    print("\n", filename)
 
-    metal,organic = split_structure_to_organic_and_metal(system)
+    metal, organic = split_structure_to_organic_and_metal(system)
     if metal.num_sites == 0:
         print(mof_name+' not metal was found in structure', end="", file=summary_mofs)
         summary_mofs.close()
         return
-    #first_coordination_structure, first_coordnation_structure_each_metal = find_first_coordination_sphere(metal, system)
-    first_coordnation_structure_each_metal = find_all_coord_spheres(metal, system)
 
     m_sa_frac,m_surface_area = 0.0,0.0
     #m_sa_frac,m_surface_areaget_metal_surface_areas(metal,system)
 
-    open_metal_site=False
-    problematic_structure=False
-    test=[] #dict()
-
-    output_json = get_output_dict(mof_name, m_surface_area, m_sa_frac, system.volume)
-
     #yappi.start()
 
-    count_omsites=0
+    #first_coordination_structure, first_coordnation_structure_each_metal = find_first_coordination_sphere(metal, system)
+    first_coordnation_structure_each_metal = find_all_coord_spheres(metal, system)
+    output_json = get_output_dict(mof_name, m_surface_area, m_sa_frac, system.volume)
+
     cs_list = [] # list of coordination sequences for each open metal found
     for m,open_metal_candidate in enumerate(first_coordnation_structure_each_metal):
-        site_dict=dict()
-        op,pr,t,tf,min_dih,all_dih = check_if_open(open_metal_candidate)
-        site_dict = update_output_dict(site_dict, op, tf, str(open_metal_candidate.species[0]), open_metal_candidate.num_sites-1, min_dih, all_dih)
+        site_dict = dict()
+        op, pr, t, tf, min_dih, all_dih = check_if_open(open_metal_candidate)
+        site_dict = update_output_dict(site_dict, op, pr, t, tf, str(open_metal_candidate.species[0]), open_metal_candidate.num_sites-1, min_dih, all_dih)
         if op:
-            count_omsites += 1
-            oms_index = match_index(str(open_metal_candidate.species[0]),open_metal_candidate.frac_coords[0],system)
             if attach_ads:
-                site_dict["oms_id"],cs_list = unique_site(oms_index, system, cs_list, output_folder, mof_name)
-            open_metal_site = op
-            problematic_structure = pr
-            test.append(t)
+                oms_index = match_index(str(open_metal_candidate.species[0]), open_metal_candidate.frac_coords[0], system)
+                site_dict["oms_id"], cs_list = unique_site(oms_index, system, cs_list, output_folder, mof_name)
             if not output_json['metal_sites_found']:
                 output_json['metal_sites_found'] = True
-            site_dict["type"] = ''
-            for ti in t:
-                if t[ti]:
-                    site_dict["type"]=site_dict["type"]+','+str(ti)
+            if pr:
+                output_json['problematic'] = True
         xyzio.XYZ(open_metal_candidate).write_file( output_folder+'/'+mof_name+'_first_coordination_sphere'+str(m)+'.xyz'  )
         output_json['metal_sites'].append(site_dict)
-    summary=write_summary(output_json)
 
     print('Checking for OMSs done. Writing files')
     #yappi.get_func_stats().print_all()
 
-    if open_metal_site:
+    summary = write_summary(output_json)
+    #if open_metal_site:
+    if output_json['metal_sites_found']:
         print(summary, end="", file = open_metal_mofs)
         shutil.copyfile(target_folder+filename, 'output/open_metal_mofs/'+filename)
     print(summary, end="\n", file = summary_mofs)
 
-    if problematic_structure:
+    #if problematic_structure:
+    if output_json['problematic'] :
         print(mof_name, end="", file = problematic_mofs)
         shutil.copyfile(target_folder+filename, 'output/problematic_metal_mofs/'+filename)
 
@@ -204,10 +192,11 @@ def get_output_dict(mof_name, m_surface_area, m_sa_frac, volume):
     output_json['max_surface_area_frac'] = m_sa_frac
     output_json['uc_volume'] = volume
     output_json['metal_sites_found'] = False
+    output_json['problematic'] = False
     output_json['metal_sites'] = list()
     return output_json
 
-def update_output_dict(site_dict, op, tf, spec, open_metal_candidate_number, min_dih, all_dih):
+def update_output_dict(site_dict, op, pr, t, tf, spec, open_metal_candidate_number, min_dih, all_dih):
 
     site_dict["is_open"] = op
     site_dict["t_factor"] = tf
@@ -217,6 +206,11 @@ def update_output_dict(site_dict, op, tf, spec, open_metal_candidate_number, min
     site_dict["min_dihedral"] = min_dih
     site_dict["all_dihedrals"] = all_dih
     site_dict["unique"] = False
+    site_dict["problematic"] = pr
+    for ti in t:
+        if t[ti]:
+            site_dict["type"] = site_dict["type"]+','+str(ti)
+
     return site_dict
 
 def unique_site(oms_index, system, cs_list, output_folder, mof_name):
@@ -420,7 +414,6 @@ def check_if_6_or_more(system):
         return False
 
 def check_if_open(system):
-#def check_if_pyramidal_square(system):
     tf = get_t_factor(system)
 
     problematic = False
@@ -431,24 +424,27 @@ def check_if_open(system):
     test['4_or_less']=False
     test['non_TD'] = False
 
-    open_metal_mof=False
-    dihedral_tolerance=5
-    num=system.num_sites
-    min_cordination=3
-
+    open_metal_mof = False
+    dihedral_tolerance = 5
+    num = system.num_sites
+    num_l = system.num_sites
+    min_cordination = 3
     if ap.is_lanthanide_or_actinide(str(system.species[0])):
         min_cordination = 5
-    if num-1 <= min_cordination:
+
+    if num_l <= min_cordination:
         open_metal_mof = True
         problematic = True
         test['4_or_less'] = True
-        return open_metal_mof,problematic,test,tf,0.0,0.0
+        min_dihid = 0.0
+        all_dihidrals = 0.0
+    #    return open_metal_mof, problematic, test, tf, 0.0, 0.0
+    else:
+        open_metal_mof, test, min_dihid, all_dihidrals = check_non_metal_dihedrals(system, test)
+        if num_l == 5 and not open_metal_mof:
+            open_metal_mof,test = check_metal_dihedrals(system, test)
 
-    open_metal_mof, test, min_dihid, all_dihidrals = check_non_metal_dihedrals(system,test)
-
-    if num-1 == 5 and not open_metal_mof:
-        open_metal_mof,test
-    return open_metal_mof,problematic,test,tf,min_dihid,all_dihidrals
+    return open_metal_mof, problematic, test, tf, min_dihid, all_dihidrals
 
 def get_t_factor(system):
     angles=[]
@@ -522,76 +518,108 @@ def get_t6_factor(a,b,c,d,e):
 #    return (abs(90.0-(a-b))/180.0)+(abs(90.0-(a-c))/90.0)
 
 
-def check_metal_dihedrals(system,test):
-    open_metal_mof=False
+def check_metal_dihedrals(system, test):
+    num = system.num_sites
+    num_l = system.num_sites - 1
+    open_metal_mof = False
     crit=dict()
     tol=dict()
 
-    crit['plane']=180
-    tol['plane']=30
-    crit['tetrahedron']=70
-    tol['tetrahedron']=10
+    crit['plane'] = 180
+    tol['plane'] = 30
 
-    num=system.num_sites
+    all_dihedrals, all_indeces = obtain_metal_dihedrals(num, system)
+    min_dihedral = min(all_dihedrals)
     number_of_planes=0
-    i=0
-    for j in range(1,num):
-        for k in range(1,num):
-            for l in range(1,num):
-                if (i==j or i==k or i==l or j==k or j==l or k==l):
-                   pass
-                else:
-                   dihedral=abs(system.get_dihedral(i,j,k,l))
-                   if num-1==5:
-                       if abs(dihedral-crit['plane'])< tol['plane'] or abs(dihedral-crit['plane']+180)< tol['plane']:
-                         number_of_planes+=1
-                         other_indeces=find_other_indeces([0,j,k,l],num)
-                         if len(other_indeces) > 2:
-                             print('Something went terribly wrong')
-                             raw_input()
-                         #dihedral_other1=abs(system.get_dihedral(other_indeces[0],j,k,l))
-                         #dihedral_other2=abs(system.get_dihedral(other_indeces[0],j,k,l))
-                         dihedral_other1=system.get_dihedral(other_indeces[0],j,k,l)
-                         dihedral_other2=system.get_dihedral(other_indeces[1],j,k,l)
-                         if (dihedral_other1*dihedral_other2)  >= 0:
-                             open_metal_mof=True
-                             test['metal_plane']=True
+    for dihedral, indeces in zip(all_dihedrals, all_indeces):
+    #i=0
+    #for j in range(1,num):
+    #    for k in range(1,num):
+    #        for l in range(1,num):
+    #    if (i==j or i==k or i==l or j==k or j==l or k==l):
+    #       pass
+    #    else:
+    #       dihedral=abs(system.get_dihedral(i,j,k,l))
+    #   if num_l == 5:
+       if abs(dihedral-crit['plane'])< tol['plane'] or abs(dihedral-crit['plane']+180)< tol['plane']:
+         number_of_planes += 1
+         other_indeces = find_other_indeces([0, j, k, l], num)
+         if len(other_indeces) > 2:
+             print('Something went terribly wrong')
+             input()
+         #dihedral_other1=abs(system.get_dihedral(other_indeces[0],j,k,l))
+         #dihedral_other2=abs(system.get_dihedral(other_indeces[0],j,k,l))
+         dihedral_other1 = system.get_dihedral(other_indeces[0],j,k,l)
+         dihedral_other2 = system.get_dihedral(other_indeces[1],j,k,l)
+         if (dihedral_other1*dihedral_other2)  >= 0:
+             open_metal_mof=True
+             test['metal_plane']=True
 
     if number_of_planes == 4:
         if open_metal_mof:
             print('conflicting criteria')
-            raw_input()
+            input()
         else:
             open_metal_mof = False
 
     return open_metal_mof, test
 
 def check_non_metal_dihedrals(system,test):
-    num=system.num_sites
-    open_metal_mof=False
-    crit=dict()
-    tol=dict()
-    crit['plane']=180
-    tol['plane']=35
-    crit['plane_5l']=180
-    tol['plane_5l']=30
-    crit['tetrahedron']=70
-    tol['tetrahedron']=10
-    if num-1==4:
+    num = system.num_sites
+    num_l = system.num_sites - 1
+    crit = dict()
+    tol = dict()
+    crit['plane'] = 180
+    tol['plane'] = 35
+    crit['plane_5l'] = 180
+    tol['plane_5l'] = 30
+    crit['tetrahedron'] = 70
+    tol['tetrahedron'] = 10
+    open_metal_mof = False
+    if num_l == 4:
         test_type='tetrahedron'
         om_type='non_TD'
-    elif num-1 == 5:
+    elif num_l == 5:
         test_type='plane_5l'
         om_type='plane_5l'
-    elif num-1 > 5:
+    elif num_l > 5:
         test_type='plane'
         om_type='same_side'
 
-    number_of_tetras=0
-    pyramidal_dihedrals=0
-    all_dihedrals=[]
-    min_dihedral=1000
-    plane_found=[0, 0, 0, 0]
+    all_dihedrals, all_indeces = obtain_dihedrals(num, system)
+    min_dihedral = min(all_dihedrals)
+    for dihedral, indeces in zip(all_dihedrals, all_indeces):
+        [i, j, k, l] = indeces
+        if num_l == 4:
+            if not (abs(dihedral - crit[test_type]) < tol[test_type] or abs(dihedral - crit[test_type]+180) < tol[test_type]):
+                test[om_type] = True
+                test[test_type] = True
+                open_metal_mof = True
+            else :
+                if abs(dihedral - crit[test_type]) < tol[test_type] or abs(dihedral - crit[test_type]+180) < tol[test_type]:
+                    if num_l == 5:
+                        test[om_type] = True
+                        test[test_type] = True
+                        open_metal_mof = True
+                    elif num_l > 5:
+                        if check_if_plane_on_metal(0, [i, j, k, l], system):
+                            other_indeces = find_other_indeces([0, i, j, k, l], num)
+                            #check if other atoms are all in the same side of the plane
+                            dihedrals_other = []
+                            for o_i in other_indeces:
+                                dihedrals_other.append(system.get_dihedral(j,k,l,o_i))
+                            if check_positive(dihedrals_other) and check_negative(dihedrals_other):
+                                pass
+                            else:
+                                test[test_type] = True
+                                test[om_type] = True
+                                open_metal_mof = True
+
+    return open_metal_mof, test, min_dihedral, all_dihedrals
+
+def obtain_dihedrals(num, system):
+    all_dihedrals = []
+    indeces = []
     for i in range(1,num):
         for j in range(1,num):
             for k in range(1,num):
@@ -599,51 +627,25 @@ def check_non_metal_dihedrals(system,test):
                     if (i==j or i==k or i==l or j==k or j==l or k==l):
                        pass
                     else:
-                        #all_dihedrals+=1
                         dihedral = abs(system.get_dihedral(i,j,k,l))
-                        min_dihedral = min(min_dihedral,abs(dihedral))
                         all_dihedrals.append(dihedral)
-                        if abs(dihedral-crit[test_type])< tol[test_type] or abs(dihedral-crit[test_type]+180)< tol[test_type]:
-                            if test_type == 'tetrahedron':
-                                pass
-                            else:
-                                check=True
-                                if num-1>5:
-                                    test['plane']=True
-                                    plane_found=[i,j,k,l]
-                                    check=False
-                                    test[test_type]=True
-                                    if check_if_plane_on_metal(0,[i,j,k,l],system):
-                                        other_indeces = find_other_indeces([0,i,j,k,l],num)
-                                        #check if other atoms are all in the same side of the plane
-                                        dihedrals_other = []
-                                        for o_i in other_indeces:
-                                            dihedrals_other.append(system.get_dihedral(j,k,l,o_i))
-                                        if check_positive(dihedrals_other) and check_negative(dihedrals_other):
-                                            pass
-                                        else:
-                                            check = True
-                                if check:
-                                    plane_found=[i,j,k,l]
-                                    test[om_type] = True
-                                    open_metal_mof = True
-                        else:
-                            if test_type == 'tetrahedron':
-                                test[om_type]=True
-                                open_metal_mof=True
-                                indeces=[i,j,k,l]
-                                n=4
-                                for ii in range(0,n-2):
-                                    for jj in range(ii+1,n-1):
-                                        for kk in range(jj+1,n):
-                                            iii=indeces[ii]
-                                            jjj=indeces[jj]
-                                            kkk=indeces[kk]
-                                            dihedral=abs(system.get_dihedral(0,iii,jjj,kkk))
-                                            if abs(dihedral-180)< 10 or abs(dihedral) < tol[test_type]:
-                                                plane_found=[0,iii,jjj,kkk]
+                        indeces.append([i, j, k , l])
+    return all_dihedrals, indeces
 
-    return open_metal_mof,test,min_dihedral,all_dihedrals
+def obtain_metal_dihedrals(num, system):
+    all_dihedrals = []
+    indeces = []
+    i = 0
+    for j in range(1,num):
+        for k in range(1,num):
+            for l in range(1,num):
+                if (i==j or i==k or i==l or j==k or j==l or k==l):
+                   pass
+                else:
+                    dihedral = abs(system.get_dihedral(i,j,k,l))
+                    all_dihedrals.append(dihedral)
+                    indeces.append([i, j, k , l])
+    return all_dihedrals, indeces
 
 def add_co2(v1,v2,v3,v4,system):
     ads_dist = 2.2
