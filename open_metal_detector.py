@@ -427,7 +427,6 @@ def check_if_open(system):
     test['non_TD'] = False
 
     open_metal_mof = False
-    dihedral_tolerance = 5
     num = system.num_sites
     num_l = system.num_sites
     min_cordination = 3
@@ -575,7 +574,7 @@ def check_non_metal_dihedrals(system,test):
     tol['plane'] = 35
     crit['plane_5l'] = 180
     tol['plane_5l'] = 30
-    crit['tetrahedron'] = 70
+    crit['tetrahedron'] = 70.528779  #70
     tol['tetrahedron'] = 10
     open_metal_mof = False
     if num_l == 4:
