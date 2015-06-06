@@ -51,6 +51,13 @@ def main():
     number_of_structures = args.max_structures
     sfile = args.summary_file
 
+
+    tolerance = dict()
+    tolerance['plane'] = 35
+    tolerance['plane_5l'] = 30
+    tolelance['tetrahedron'] = 10
+    tolelance['plane_on_metal'] = 12.5
+
     t0 = time.time()
     with open(params_filename,'r') as params_file:
         if not cont:
@@ -531,8 +538,24 @@ def check_metal_dihedrals(system, test):
 
     all_dihedrals, all_indeces = obtain_metal_dihedrals(num, system)
     min_dihedral = min(all_dihedrals)
-    number_of_planes=0
+    number_of_planes = 0
     for dihedral, indeces in zip(all_dihedrals, all_indeces):
+        [i, j, k, l] = indeces
+        if abs(dihedral - crit['plane']) < tol['plane'] or abs(dihedral - crit['plane']+180) < tol['plane']:
+            number_of_planes += 1
+            other_indeces = find_other_indeces([0, j, k, l], num)
+            if len(other_indeces) > 2:
+                print('Something went terribly wrong')
+                input()
+            #dihedral_other1 = system.get_dihedral(other_indeces[0],j,k,l)
+            #dihedral_other2 = system.get_dihedral(other_indeces[1],j,k,l)
+            dihedrals_other = []
+            for o_i in other_indeces:
+                dihedrals_other.append(system.get_dihedral(j,k,l,o_i))
+            if not (check_positive(dihedrals_other) and check_negative(dihedrals_other)):
+                open_metal_mof=True
+                test['metal_plane']=True
+
     #i=0
     #for j in range(1,num):
     #    for k in range(1,num):
@@ -542,19 +565,6 @@ def check_metal_dihedrals(system, test):
     #    else:
     #       dihedral=abs(system.get_dihedral(i,j,k,l))
     #   if num_l == 5:
-       if abs(dihedral-crit['plane'])< tol['plane'] or abs(dihedral-crit['plane']+180)< tol['plane']:
-         number_of_planes += 1
-         other_indeces = find_other_indeces([0, j, k, l], num)
-         if len(other_indeces) > 2:
-             print('Something went terribly wrong')
-             input()
-         #dihedral_other1=abs(system.get_dihedral(other_indeces[0],j,k,l))
-         #dihedral_other2=abs(system.get_dihedral(other_indeces[0],j,k,l))
-         dihedral_other1 = system.get_dihedral(other_indeces[0],j,k,l)
-         dihedral_other2 = system.get_dihedral(other_indeces[1],j,k,l)
-         if (dihedral_other1*dihedral_other2)  >= 0:
-             open_metal_mof=True
-             test['metal_plane']=True
 
     if number_of_planes == 4:
         if open_metal_mof:
@@ -609,9 +619,7 @@ def check_non_metal_dihedrals(system,test):
                             dihedrals_other = []
                             for o_i in other_indeces:
                                 dihedrals_other.append(system.get_dihedral(j,k,l,o_i))
-                            if check_positive(dihedrals_other) and check_negative(dihedrals_other):
-                                pass
-                            else:
+                            if not (check_positive(dihedrals_other) and check_negative(dihedrals_other)):
                                 test[test_type] = True
                                 test[om_type] = True
                                 open_metal_mof = True
@@ -750,11 +758,11 @@ def check_if_plane_on_metal(m_i, indeces, system):
 
 def check_positive(N):
     for n in N:
-        if n>0:return True
+        if n > 0:return True
 
 def check_negative(N):
     for n in N:
-        if n<0:return True
+        if n < 0:return True
 
 def find_other_indeces(indeces,num):
     other_indeces=[]
