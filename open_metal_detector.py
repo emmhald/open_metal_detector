@@ -55,8 +55,8 @@ def main():
     tolerance = dict()
     tolerance['plane'] = 35
     tolerance['plane_5l'] = 30
-    tolelance['tetrahedron'] = 10
-    tolelance['plane_on_metal'] = 12.5
+    tolerance['tetrahedron'] = 10
+    tolerance['plane_on_metal'] = 12.5
 
     t0 = time.time()
     with open(params_filename,'r') as params_file:
@@ -70,7 +70,7 @@ def main():
             if filename.split('.')[0] == 'xyz':
                 for j in range(1,7):
                     uc_params.append(float(line_elements[j]))
-            analyze_structure(filename, uc_params, sfile, cont, source_folder, target_folder, attach_ads)
+            analyze_structure(filename, uc_params, sfile, cont, source_folder, target_folder, attach_ads, tolerance)
             t1s = time.time()
             print('Time:',t1s-t0s)
             if i+1 >= number_of_structures:
@@ -103,7 +103,7 @@ def delete_folder(folder_path):
             else:
                 shutil.rmtree(file_object_path)
 
-def analyze_structure(filename, uc_params, sfile, cont, source_folder, target_folder, attach_ads):
+def analyze_structure(filename, uc_params, sfile, cont, source_folder, target_folder, attach_ads, tolerance):
 
     mof_name = filename.split('.')[0]
     output_folder = target_folder+mof_name
@@ -154,7 +154,7 @@ def analyze_structure(filename, uc_params, sfile, cont, source_folder, target_fo
     cs_list = [] # list of coordination sequences for each open metal found
     for m,open_metal_candidate in enumerate(first_coordnation_structure_each_metal):
         site_dict = dict()
-        op, pr, t, tf, min_dih, all_dih = check_if_open(open_metal_candidate)
+        op, pr, t, tf, min_dih, all_dih = check_if_open(open_metal_candidate, tolerance)
         site_dict = update_output_dict(site_dict, op, pr, t, tf, str(open_metal_candidate.species[0]), open_metal_candidate.num_sites-1, min_dih, all_dih)
         if op:
             if attach_ads:
@@ -422,7 +422,7 @@ def check_if_6_or_more(system):
     else:
         return False
 
-def check_if_open(system):
+def check_if_open(system, tolerance):
     tf = get_t_factor(system)
 
     problematic = False
@@ -448,9 +448,9 @@ def check_if_open(system):
         all_dihidrals = 0.0
     #    return open_metal_mof, problematic, test, tf, 0.0, 0.0
     else:
-        open_metal_mof, test, min_dihid, all_dihidrals = check_non_metal_dihedrals(system, test)
+        open_metal_mof, test, min_dihid, all_dihidrals = check_non_metal_dihedrals(system, test, tolerance)
         if num_l == 5 and not open_metal_mof:
-            open_metal_mof,test = check_metal_dihedrals(system, test)
+            open_metal_mof,test = check_metal_dihedrals(system, test, tolerance)
 
     return open_metal_mof, problematic, test, tf, min_dihid, all_dihidrals
 
@@ -526,7 +526,7 @@ def get_t6_factor(a,b,c,d,e):
 #    return (abs(90.0-(a-b))/180.0)+(abs(90.0-(a-c))/90.0)
 
 
-def check_metal_dihedrals(system, test):
+def check_metal_dihedrals(system, test, tolerance):
     num = system.num_sites
     num_l = system.num_sites - 1
     open_metal_mof = False
@@ -534,7 +534,7 @@ def check_metal_dihedrals(system, test):
     tol=dict()
 
     crit['plane'] = 180
-    tol['plane'] = 30
+    tol['plane'] = tolerance['plane'] #30
 
     all_dihedrals, all_indeces = obtain_metal_dihedrals(num, system)
     min_dihedral = min(all_dihedrals)
@@ -575,17 +575,17 @@ def check_metal_dihedrals(system, test):
 
     return open_metal_mof, test
 
-def check_non_metal_dihedrals(system,test):
+def check_non_metal_dihedrals(system, test, tolerance):
     num = system.num_sites
     num_l = system.num_sites - 1
     crit = dict()
     tol = dict()
     crit['plane'] = 180
-    tol['plane'] = 35
+    tol['plane'] = tolerance['plane'] #35
     crit['plane_5l'] = 180
-    tol['plane_5l'] = 30
+    tol['plane_5l'] = tolerance['plane_5l'] #30
     crit['tetrahedron'] = 70.528779  #70
-    tol['tetrahedron'] = 10
+    tol['tetrahedron'] = tolerance['tetrahedron'] #10
     open_metal_mof = False
     if num_l == 4:
         test_type='tetrahedron'
@@ -613,7 +613,7 @@ def check_non_metal_dihedrals(system,test):
                         test[test_type] = True
                         open_metal_mof = True
                     elif num_l > 5:
-                        if check_if_plane_on_metal(0, [i, j, k, l], system):
+                        if check_if_plane_on_metal(0, [i, j, k, l], system, tolerance):
                             other_indeces = find_other_indeces([0, i, j, k, l], num)
                             #check if other atoms are all in the same side of the plane
                             dihedrals_other = []
@@ -740,9 +740,9 @@ def calc_plane(x, y, z):
     plane_v_norm = plane_v/np.linalg.norm(plane_v)
     return plane_v_norm
 
-def check_if_plane_on_metal(m_i, indeces, system):
+def check_if_plane_on_metal(m_i, indeces, system, tolerance):
     crit = 180
-    tol = 12.5   #set to 12.5 so that ferocene type coordination spheres are dected correctly. eg. BUCROH
+    tol = tolerance['plane_on_metal'] #12.5   #set to 12.5 so that ferocene type coordination spheres are dected correctly. eg. BUCROH
     #tol = 25.0
     for i in range(1,len(indeces)):
         for j in range(1,len(indeces)):
