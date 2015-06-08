@@ -435,7 +435,7 @@ def check_if_open(system, tolerance):
 
     open_metal_mof = False
     num = system.num_sites
-    num_l = system.num_sites
+    num_l = system.num_sites - 1
     min_cordination = 3
     if ap.is_lanthanide_or_actinide(str(system.species[0])):
         min_cordination = 5
@@ -633,6 +633,7 @@ def obtain_dihedrals(num, system):
         for j in range(1,num):
             for k in range(1,num):
                 for l in range(1,num):
+    #                print(i,j,k,l)
                     if (i==j or i==k or i==l or j==k or j==l or k==l):
                        pass
                     else:
