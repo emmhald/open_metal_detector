@@ -84,7 +84,7 @@ def clear_files(sfile, cont, target_folder):
     make_folder('output')
     file_type = 'w'
     open_metal_mofs = open('output/open_metal_mofs.out',file_type)
-    problematic_mofs = open('output/problematic.out',file_type)
+    problematic_mofs = open('output/problematic.gcd',file_type)
     summary_mofs= open('output/'+sfile,file_type)
     open_metal_mofs.close()
     problematic_mofs.close()
@@ -179,7 +179,7 @@ def analyze_structure(filename, uc_params, sfile, cont, source_folder, target_fo
 
     #if problematic_structure:
     if output_json['problematic'] :
-        print(mof_name, end="", file = problematic_mofs)
+        print(mof_name.split('_')[0], file = problematic_mofs)
         shutil.copyfile(source_folder+filename, target_folder+'problematic_metal_mofs/'+filename)
 
     write_xyz_file(output_folder+'/'+mof_name+'_metal.xyz',metal)
@@ -317,6 +317,7 @@ def find_coord_sphere(center, structure):
                 print('something went terribly wrong')
                 raw_input()
             #print('Increasing bond_tolerance by ',increase)
+    check_structure = center_around_metal(check_structure)
     return coord_sphere, check_structure
 
 def find_first_coordination_sphere(metal, structure_full):
@@ -363,7 +364,7 @@ def find_first_coordination_sphere(metal, structure_full):
         for cls,clc in zip(first_coordnation_list_species,first_coordnation_list_coords):
             first_coordnation_structure_each_metal[m].append(cls,clc)
             first_coordination_structure.append(cls,clc)
-        first_coordnation_structure_each_metal[m]=center_around_metal(first_coordnation_structure_each_metal[m])
+        first_coordnation_structure_each_metal[m] = center_around_metal(first_coordnation_structure_each_metal[m])
     return first_coordination_structure, first_coordnation_structure_each_metal
 
 #def check_if_enough_bonds(bonds_found,increase,metal):
@@ -430,7 +431,7 @@ def check_if_open(system, tolerance):
     test['plane'] = False
     test['same_side'] = False
     test['metal_plane'] = False
-    test['4_or_less']=False
+    test['3_or_less'] = False
     test['non_TD'] = False
 
     open_metal_mof = False
@@ -440,10 +441,12 @@ def check_if_open(system, tolerance):
     if ap.is_lanthanide_or_actinide(str(system.species[0])):
         min_cordination = 5
 
-    if num_l <= min_cordination:
-        open_metal_mof = True
+    if num_l < min_cordination:
         problematic = True
-        test['4_or_less'] = True
+
+    if num_l <= 3: #min_cordination:
+        open_metal_mof = True
+        test['3_or_less'] = True
         min_dihid = 0.0
         all_dihidrals = 0.0
     #    return open_metal_mof, problematic, test, tf, 0.0, 0.0
