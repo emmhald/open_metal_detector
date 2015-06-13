@@ -66,7 +66,7 @@ def main():
             t0s = time.time()
             uc_params=[]
             line_elements=shlex.split(struc)
-            filename=line_elements[0]
+            filename = line_elements[0]
             if filename.split('.')[0] == 'xyz':
                 for j in range(1,7):
                     uc_params.append(float(line_elements[j]))
@@ -294,31 +294,36 @@ def find_all_coord_spheres(centers, structure):
 
 def find_coord_sphere(center, structure):
     dist = structure.lattice.get_all_distances(structure.frac_coords[center], structure.frac_coords)
+    if dist[0][center] > 0.0000001:
+        sys.exit('The self distance appears to be non-negative')
 
-    increase=1.0
+    increase =  1.0
     while True:
-        bonds_found = 0
-        first_coordnation_list_species = []
-        first_coordnation_list_coords = []
-        coord_sphere = []
+        ligands_species = []
+        ligands_coords = []
+        coord_sphere = [center]
         for i,dis in enumerate(dist[0]):
-            bond_tol = ap.get_bond_tolerance(str(structure.species[center]),str(structure.species[i]))*increase
-            if ap.bond_check(str(structure.species[center]), str(structure.species[i]), dis, bond_tol):
-                first_coordnation_list_species.append(structure.species[i])
-                first_coordnation_list_coords.append(structure.frac_coords[i])
-                coord_sphere.append(i)
-                bonds_found+=1
-        check_structure = Structure(structure.lattice, first_coordnation_list_species, first_coordnation_list_coords)
+            if i != center:
+                bond_tol = ap.get_bond_tolerance(str(structure.species[center]),str(structure.species[i]))*increase
+                if ap.bond_check(str(structure.species[center]), str(structure.species[i]), dis, bond_tol):
+                    ligands_species.append(structure.species[i])
+                    ligands_coords.append(structure.frac_coords[i])
+                    coord_sphere.append(i)
+        check_structure = Structure(structure.lattice, ligands_species, ligands_coords)
         if ap.check_if_valid_bonds(check_structure, bond_tol, increase):
             break
         else:
-            increase -= 0.1
+            increase -= 0.05
             if increase < 0 :
                 print('something went terribly wrong')
                 raw_input()
             #print('Increasing bond_tolerance by ',increase)
-    check_structure = center_around_metal(check_structure)
-    return coord_sphere, check_structure
+    first_coordnation_list_species = [structure.species[center]] + ligands_species
+    first_coordnation_list_coords = [structure.frac_coords[center]] + ligands_coords
+
+    coord_sphere_structure = Structure(structure.lattice, first_coordnation_list_species, first_coordnation_list_coords)
+    coord_sphere_structure = center_around_metal(coord_sphere_structure)
+    return coord_sphere, coord_sphere_structure
 
 def find_first_coordination_sphere(metal, structure_full):
     tol = 0.3
