@@ -73,6 +73,7 @@ def load_structures(output_folder, parameter_file):
             json_dict = read_json(output_folder+'/'+struc+'/'+struc)
             if not json_dict:
                 continue
+            json_dict['source_name'] = output_folder+'/'+struc
             json_dicts.append(json_dict)
     print('Done')
     return json_dicts
@@ -188,6 +189,10 @@ def collect_statistics(json_dicts):
                 tfac = 't'+str(l)
             stats[metal][tfac]+=1
 
+        if len(number_of_linkers) > 0:
+            if min(number_of_linkers) < 4:
+                copy_folder(min(number_of_linkers), json_dict['source_name'])
+
     # This returns a sorted tuple based on keyfunc, which uses the key count_open to reverse sort the stats dictionary
     # A more consise but less clear sollution would be
     #stats_sorted = sorted(stats.items(), key = lambda tup : (-tup[1]["count_open"]))
@@ -197,9 +202,9 @@ def collect_statistics(json_dicts):
         #Since stats_sorted is a sorted tuple of the dictionary stats,
         #the first element corresponds to the keys from the stas dictionary
         #and the second element to the value, in this dictionary holding the stats for each metal
-        metal=stat[0]
-        s=stat[1]
-        printout=[]
+        metal = stat[0]
+        s = stat[1]
+        printout = []
         printout.append(metal)
         printout.append(s['count'])
         printout.append(s['count_open'])
@@ -229,13 +234,22 @@ def collect_statistics(json_dicts):
     for p in printouts:
         #print "{0:6}{1:11}{2:15}{3:6}{4:6}{5:6}".format(*p)
         #print "{0:3}{1:6}{2:8}{3:>8}{4:6}{5:6}{6:6}{7:6}{8:6}{9:6}{10:6}{11:6}".format(*p)
-        print("{0:6}{1:^12}{2:^18}{3:^12}{4:^12}{5:^6}{6:^6}{7:^6}{8:^6}{9:^6}{10:^6}{11:^8}{12:^8}".format(*p))
+        print("{0:6}{1:^12}{2:^18}{3:^12}{4:^16}{5:^6}{6:^6}{7:^6}{8:^6}{9:^6}{10:^6}{11:^8}{12:^8}".format(*p))
+
+def copy_folder(linker, src):
+    dest='analysis/L_'+str(linker)+'/'
+    if not os.path.exists(dest):
+        os.makedirs(dest)
+    s = src.split('/')[-1]
+    d = os.path.join(dest, s)
+    if not os.path.exists(d):
+        shutil.copytree(src, d)
+
+
 
 def keyfunc(tup):
         key, d = tup
         return -d["count_open"]
-
-
 
 def fetch_num_of_ligands(json_dict):
     num_of_ligands = []
@@ -257,7 +271,6 @@ def  fetch_t_factor(json_dict):
 
 
 #older methods. conisder deleting
-
 
 def analyze_for_tfac():
     tfac_analysis_folder = 'analysis/tfac_analysis_with_angles'
