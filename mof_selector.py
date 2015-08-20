@@ -23,6 +23,7 @@ import json
 import re
 from pymatgen.io.smartio import read_structure, write_structure
 import argparse
+from atomic_parameters import atoms as ap
 
 def main():
     parser = argparse.ArgumentParser(description='Split file into batches')
@@ -35,7 +36,7 @@ def main():
     parameters_file = args.parameter_file
     ele = args.target_element
     json_dicts = load_structures(output_folder, parameters_file)
-    #analyze_for_tfac_using_json(json_dicts)
+    analyze_for_tfac_using_json(json_dicts)
     collect_statistics(json_dicts)
     if ele:
         analyse_results(json_dicts, ele, output_folder)
@@ -69,13 +70,12 @@ def load_structures(output_folder, parameter_file):
     with open(parameter_file, 'r') as parameters:
         for l in parameters:
             struc = l.split('.')[0]
-    #        print struc
             json_dict = read_json(output_folder+'/'+struc+'/'+struc)
-            if not json_dict:
-                continue
-            json_dict['source_name'] = output_folder+'/'+struc
-            json_dicts.append(json_dict)
-    print('Done')
+            #if not json_dict:
+            #    continue
+            if json_dict:
+                json_dict['source_name'] = output_folder+'/'+struc
+                json_dicts.append(json_dict)
     return json_dicts
 
 def analyze_for_tfac_using_json(json_dicts):
@@ -110,7 +110,7 @@ def analyze_for_tfac_using_json(json_dicts):
         num_of_ligands = fetch_num_of_ligands(json_dict)
         om_type = fetch_if_open(json_dict)
         tfactors = fetch_t_factor(json_dict)
-        for L,typ,tf in zip(num_of_ligands,om_type,tfactors):
+        for L, typ, tf in zip(num_of_ligands,om_type,tfactors):
             if int(L) > 3 and int(L) < 7:
                 outfile = yes_or_no[typ]+'_'+str(L)
                 print(outfile,struc,yes_or_no[typ],tf)
@@ -130,7 +130,7 @@ def analyze_for_tfac_using_json(json_dicts):
             eval(outfile).close()
             print(yn,i)
             if len(tfac_list) > 0:
-                hist, edges = np.histogram(tfac_list,bins=40,range=(0,1),density=True)
+                hist, edges = np.histogram(tfac_list,bins=50,range=(0,1),density=True)
                 hist_file = open(tfac_analysis_folder+'/'+outfile+'_hist.out','w')
                 w=(edges[1]-edges[0])/2
                 for e,h in zip(edges,hist):
@@ -142,19 +142,19 @@ def collect_statistics(json_dicts):
     for json_dict in json_dicts:
         metal_sites=json_dict['metal_sites']
         for ms in metal_sites:
-            metal=ms['metal']
-            stats[metal]=dict()
-            stats[metal]['count_open_sites']=0
-            stats[metal]['count_open']=0
-            stats[metal]['count']=0
-            stats[metal]['t0']=0
-            stats[metal]['t1']=0
-            stats[metal]['t2']=0
-            stats[metal]['t3']=0
-            stats[metal]['t4']=0
-            stats[metal]['t5']=0
-            stats[metal]['t6']=0
-            stats[metal]['tover']=0
+            metal = ms['metal']
+            stats[metal] = dict()
+            stats[metal]['count_open_sites'] = 0
+            stats[metal]['count_open'] = 0
+            stats[metal]['count'] = 0
+            stats[metal]['t0'] = 0
+            stats[metal]['t1'] = 0
+            stats[metal]['t2'] = 0
+            stats[metal]['t3'] = 0
+            stats[metal]['t4'] = 0
+            stats[metal]['t5'] = 0
+            stats[metal]['t6'] = 0
+            stats[metal]['tover'] = 0
 
     for json_dict in json_dicts:
         struc = json_dict['material_name']
@@ -190,8 +190,9 @@ def collect_statistics(json_dicts):
             stats[metal][tfac]+=1
 
         if len(number_of_linkers) > 0:
-            if min(number_of_linkers) < 4:
-                copy_folder(min(number_of_linkers), json_dict['source_name'])
+            if min(number_of_linkers) < 0:
+                dest='analysis/L_'+str(min(number_of_linkers))+'/'
+                copy_folder(dest , json_dict['source_name'])
 
     # This returns a sorted tuple based on keyfunc, which uses the key count_open to reverse sort the stats dictionary
     # A more consise but less clear sollution would be
@@ -204,6 +205,10 @@ def collect_statistics(json_dicts):
         #and the second element to the value, in this dictionary holding the stats for each metal
         metal = stat[0]
         s = stat[1]
+
+        if ap.is_group1(metal):
+            continue
+
         printout = []
         printout.append(metal)
         printout.append(s['count'])
@@ -236,12 +241,13 @@ def collect_statistics(json_dicts):
         #print "{0:3}{1:6}{2:8}{3:>8}{4:6}{5:6}{6:6}{7:6}{8:6}{9:6}{10:6}{11:6}".format(*p)
         print("{0:6}{1:^12}{2:^18}{3:^12}{4:^16}{5:^6}{6:^6}{7:^6}{8:^6}{9:^6}{10:^6}{11:^8}{12:^8}".format(*p))
 
-def copy_folder(linker, src):
-    dest='analysis/L_'+str(linker)+'/'
+def copy_folder(dest, src):
     if not os.path.exists(dest):
         os.makedirs(dest)
     s = src.split('/')[-1]
     d = os.path.join(dest, s)
+    #print(src, d, not os.path.exists(d))
+    #input()
     if not os.path.exists(d):
         shutil.copytree(src, d)
 
@@ -330,7 +336,7 @@ def analyze_for_tfac():
                 tfac=l.split(' ')[filetype].rstrip('\n')
                 tfac_list.append(float(tfac))
             eval(outfile).close()
-            hist, edges = np.histogram(tfac_list,bins=40,range=(0,1),density=True)
+            hist, edges = np.histogram(tfac_list,bins=80,range=(0,1),density=True)
             hist_file=open(tfac_analysis_folder+'/'+outfile+'_hist.out','w')
             w=(edges[1]-edges[0])/2
             for e,h in zip(edges,hist):
@@ -394,8 +400,8 @@ def analyse_results_sa():
     for i in xrange(-5,250,5):
         bins.append(i)
     nbin=len(bins)
-    sa_hist=np.histogram(sa,bins,density=True)
-    sa_o_hist=np.histogram(sa_o,bins) #,density=True
+    sa_hist = np.histogram(sa,bins,density=True)
+    sa_o_hist = np.histogram(sa_o,bins) #,density=True
     fig = plt.figure(1)
     ind=range(0,nbin-1)
     for i,b in zip(bins,sa_o_hist[0]):
@@ -441,26 +447,33 @@ def analyse_results(json_dicts, element, output_folder):
             print(json_dict['material_name'],'closed')
         if struc_contains_open_metal:
             count += 1
+
             struc = json_dict['material_name']
+            ads_folder = output_folder+'/'+struc
+            copy_folder(folder+'/' , ads_folder)
+            #copy_folder(folder+'/'+struc , ads_folder)
             if not os.path.exists(folder+'/'+struc):
                 os.makedirs(folder+'/'+struc)
-            cif_name = struc+'.cif'
-            print(cif_name,'-',len(oms_ids),'-',len(set(oms_ids)),'-', oms_ids,'-', *[oms_ids.count(i) for i in set(oms_ids)] )
-            print(struc+'.cif',file=summary_ele)
-            cif = CifParser(cif_folder+cif_name)
-            system = cif.get_structures()[0]
-            system.to(fmt='xyz',filename = folder+'/'+struc+'/'+struc+'.xyz')
-            shutil.copyfile(cif_folder+cif_name, folder+'/'+struc+'/'+cif_name)
-            shutil.copyfile(cif_folder+cif_name, cif_folder_out+'/'+cif_name)
-            dynamics=[]
-            for atom in range(0,system.num_sites):
-                dynamics.append([False,False,False])
-            pos=vasp.Poscar(system,selective_dynamics =dynamics)
-            pos.write_file(folder+'/'+struc+'/POSCAR_'+struc)
-            #print(folder+'/'+struc+'/POSCAR_'+struc)
-            #ads_folder='../detect_open_metal_sites/July_2014_runs/output/'+struc
-            ads_folder=output_folder+'/'+struc
-            if 1 == 1:
+            if 1==2:
+
+                cif_name = struc+'.cif'
+                print(cif_name,'-',len(oms_ids),'-',len(set(oms_ids)),'-', oms_ids,'-', *[oms_ids.count(i) for i in set(oms_ids)] )
+                print(struc+'.cif',file=summary_ele)
+                cif = CifParser(cif_folder+cif_name)
+                system = cif.get_structures()[0]
+                system.to(fmt='xyz',filename = folder+'/'+struc+'/'+struc+'.xyz')
+                shutil.copyfile(cif_folder+cif_name, folder+'/'+struc+'/'+cif_name)
+                shutil.copyfile(cif_folder+cif_name, cif_folder_out+'/'+cif_name)
+                dynamics=[]
+                for atom in range(0,system.num_sites):
+                    dynamics.append([False,False,False])
+                pos=vasp.Poscar(system,selective_dynamics =dynamics)
+                pos.write_file(folder+'/'+struc+'/POSCAR_'+struc)
+                #print(folder+'/'+struc+'/POSCAR_'+struc)
+                #ads_folder='../detect_open_metal_sites/July_2014_runs/output/'+struc
+
+
+            if 1 == 2:
                 for ads_type in ['co2', 'n2']:
                     om_count = -1
                     while True:
