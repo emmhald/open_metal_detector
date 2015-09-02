@@ -350,41 +350,36 @@ def find_all_coord_spheres(centers, structure):
 def find_coord_sphere(center, structure):
     dist = structure.lattice.get_all_distances(structure.frac_coords[center],
                                                structure.frac_coords)
+    center_structure = Structure(structure.lattice, [structure.species[center]],
+                                 [structure.frac_coords[center]])
+
     if dist[0][center] > 0.0000001:
         sys.exit('The self distance appears to be non-negative')
 
-    increase = 1.0
-    while True:
-        ligands_species = []
-        ligands_coords = []
-        coord_sphere = [center]
-        for i, dis in enumerate(dist[0]):
-            if i != center:
-                species_one = str(structure.species[center])
-                species_two = str(structure.species[i])
-                tol = ap.get_bond_tolerance(species_one, species_two)
-                bond_tol = tol*increase
-                if ap.bond_check(species_one, species_two, dis, bond_tol):
-                    ligands_species.append(structure.species[i])
-                    ligands_coords.append(structure.frac_coords[i])
-                    coord_sphere.append(i)
-        check_structure = Structure(structure.lattice, ligands_species,
-                                    ligands_coords)
-        if ap.check_if_valid_bonds(check_structure, bond_tol, increase):
-            break
-        else:
-            increase -= 0.05
-            if increase < 0:
-                print('something went terribly wrong')
-                input()
-            # print('Increasing bond_tolerance by ',increase)
-    first_coord_list_species = [structure.species[center]] + ligands_species
-    first_coord_list_coords = [structure.frac_coords[center]] + ligands_coords
-
-    coord_sphere_structure = Structure(structure.lattice,
-                                       first_coord_list_species,
-                                       first_coord_list_coords)
-    coord_sphere_structure = center_around_metal(coord_sphere_structure)
+    # ligands_structure_new = None
+    ligands_structure_new = Structure(structure.lattice,
+                                      [structure.species[center]],
+                                      [structure.frac_coords[center]])
+    coord_sphere = [center]
+    for i, dis in enumerate(dist[0]):
+        if i == center:
+            continue
+        species_one = str(structure.species[center])
+        species_two = str(structure.species[i])
+        tol = ap.get_bond_tolerance(species_one, species_two)
+        bond_tol = tol
+        if ap.bond_check(species_one, species_two, dis, bond_tol):
+            try:
+                ligands_structure_new.append(str(structure.species[i]),
+                                             structure.frac_coords[i])
+            except Exception as e:
+                ligands_structure_new = Structure(structure.lattice,
+                                                  [structure.species[i]],
+                                                  [structure.frac_coords[i]]
+                                                  )
+    ligands = ap.keep_valid_bonds(ligands_structure_new, 0)
+    # ligands.insert(0, structure.species[center], structure.frac_coords[center])
+    coord_sphere_structure = center_around_metal(ligands)
     return coord_sphere, coord_sphere_structure
 
 
