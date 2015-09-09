@@ -557,8 +557,9 @@ def get_t_factor(coordination_sphere):
     # beta is the largest angle and alpha is the second largest angle
     # in the coordination sphere; using the same convention as Yang et al.
     # DOI: 10.1039/b617136b
-    beta = all_angles[-1][0]
-    alpha = all_angles[-2][0]
+    if num > 3:
+        beta = all_angles[-1][0]
+        alpha = all_angles[-2][0]
 
     if num-1 == 6:
         max_indeces_all = all_angles[-1][1:3]
