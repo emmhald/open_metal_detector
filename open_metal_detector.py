@@ -28,6 +28,7 @@ from atomic_parameters import atoms as ap
 import json
 import argparse
 import pymatgen.io.xyzio as xyzio
+import itertools
 import yappi
 
 
@@ -543,54 +544,32 @@ def check_if_open(system, tolerance):
     return open_metal_mof, problematic, test, tf, min_dihid, all_dihidrals
 
 
-def get_t_factor(system):
-    angles = []
-    num = system.num_sites
-    max_angle = 0.0
-    for i in range(1, num-1):
-        for j in range(i+1, num):
-            angles.append(system.get_angle(i, 0, j))
-            if max_angle < angles[-1]:
-                max_index = i
-                sec_index = j
-                max_angle = angles[-1]
+def get_t_factor(coordination_sphere):
 
-    angles.sort()
-    if num-1>3 and num-1<6:
-        beta = angles[-1]
-        alpha = angles[-2]
-        gamma = angles[0]
-    elif num-1 == 6:
-        angles_max = []
-        for j in range(1, num):
-            if j != max_index:
-                angles_max.append(system.get_angle(max_index, 0, j))
-        angles_max.sort()
-        beta = angles_max[-2]
-        alpha = angles_max[-1]
-        gamma = angles_max[2]
-# New Angles VOG
-        max_angle = 0.0
-        for i in range(1, num-1):
-            for j in range(i+1, num):
-                if i != max_index and i != sec_index and j != max_index \
-                        and j != sec_index:
-                    angles.append(system.get_angle(i, 0, j))
-                    if max_angle < angles[-1]:
-                        thr_index = i
-                        fou_index = j
-                        max_angle = angles[-1]
-                        delta = angles[-1]
+    num = coordination_sphere.num_sites
+    index_range = range(1, num)
+    all_angles = []
+    for i in itertools.combinations(index_range, 2):
+        angle = coordination_sphere.get_angle(i[0], 0, i[1])
+        all_angles.append([angle, i[0], i[1]])
 
-        for i in range(1, num-1):
-            for j in range(i+1, num):
-                if i != max_index and i != sec_index and i != thr_index \
-                        and i != fou_index and j != max_index and j != sec_index \
-                        and j != thr_index and j != fou_index:
-                    epsilon = system.get_angle(i, 0, j)
+    all_angles.sort(key=lambda x: x[0])
+    # beta is the largest angle and alpha is the second largest angle
+    # in the coordination sphere; using the same convention as Yang et al.
+    # DOI: 10.1039/b617136b
+    beta = all_angles[-1][0]
+    alpha = all_angles[-2][0]
 
     if num-1 == 6:
-        tau = get_t6_factor(alpha, beta, gamma, delta, epsilon)
+        max_indeces_all = all_angles[-1][1:3]
+        l3_l4_angles = [x for x in all_angles if x[1] not in max_indeces_all and
+                        x[2] not in max_indeces_all]
+        max_indeces_all_3_4 = max(l3_l4_angles, key=lambda x: x[0])[1:3]
+        l5_l6_angles = [x for x in l3_l4_angles
+                        if x[1] not in max_indeces_all_3_4 and
+                        x[2] not in max_indeces_all_3_4]
+        gamma = max(l5_l6_angles, key=lambda x: x[0])[0]
+        tau = get_t6_factor(gamma)
     elif num-1 == 5:
         tau = get_t5_factor(alpha, beta)
     elif num-1 == 4:
@@ -600,7 +579,7 @@ def get_t_factor(system):
     return tau
 
 
-def get_t4_factor(a ,b):
+def get_t4_factor(a, b):
     return (360-(a+b))/141.0
 
 
@@ -608,17 +587,8 @@ def get_t5_factor(a, b):
     return (b-a)/60.0
 
 
-def get_t6_factor(a, b, c, d, e):
-    # return 1.0-(a-c)/120
-    # print 'abcde',a,b,c,d,e
-    # print (abs(90.0-(a-b))/180.0)
-    # print (abs(90.0-(a-c))/90.0)
-    # print ((e-d)/180)
-    return e/180
-#    return (1-(180-e)/140 )
-#    return ((540-a-d-e)/180)
-#    return (1- (abs(90.0-(a-b))/180.0) - (abs(90.0-(a-c))/90.0) - ((e-d)/180))
-#    return (abs(90.0-(a-b))/180.0)+(abs(90.0-(a-c))/90.0)
+def get_t6_factor(c):
+    return c/180
 
 
 def check_metal_dihedrals(system, test, tolerance):
