@@ -676,29 +676,29 @@ def check_non_metal_dihedrals(system, test, tolerance):
                 test[om_type] = True
                 test[test_type] = True
                 open_metal_mof = True
-            else:
-                if abs(dihedral - crit[test_type]) < tol[test_type] \
-                        or abs(dihedral - crit[test_type]+180) < tol[test_type]:
-                    if num_l == 5:
-                        test[om_type] = True
-                        test[test_type] = True
-                        open_metal_mof = True
-                    elif num_l > 5:
-                        if check_if_plane_on_metal(0, [i, j, k, l],
-                                                   system, tolerance):
-                            other_indeces = find_other_indeces([0, i, j, k, l],
-                                                               num)
-                            # check if other atoms are all in the same side
-                            # of the plane
-                            dihedrals_other = []
-                            for o_i in other_indeces:
-                                dihedrals = system.get_dihedral(j, k, l, o_i)
-                                dihedrals_other.append(dihedrals)
-                            if not (check_positive(dihedrals_other)
-                                    and check_negative(dihedrals_other)):
-                                test[test_type] = True
-                                test[om_type] = True
-                                open_metal_mof = True
+        else:
+            if abs(dihedral - crit[test_type]) < tol[test_type] \
+                    or abs(dihedral - crit[test_type]+180) < tol[test_type]:
+                if num_l == 5:
+                    test[om_type] = True
+                    test[test_type] = True
+                    open_metal_mof = True
+                elif num_l > 5:
+                    if check_if_plane_on_metal(0, [i, j, k, l],
+                                               system, tolerance):
+                        other_indeces = find_other_indeces([0, i, j, k, l],
+                                                           num)
+                        # check if other atoms are all in the same side
+                        # of the plane
+                        dihedrals_other = []
+                        for o_i in other_indeces:
+                            dihedrals = system.get_dihedral(j, k, l, o_i)
+                            dihedrals_other.append(dihedrals)
+                        if not (check_positive(dihedrals_other)
+                                and check_negative(dihedrals_other)):
+                            test[test_type] = True
+                            test[om_type] = True
+                            open_metal_mof = True
 
     return open_metal_mof, test, min_dihedral, all_dihedrals
 
