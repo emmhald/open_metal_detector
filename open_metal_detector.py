@@ -65,8 +65,8 @@ def main():
     sfile = args.summary_file
 
     tolerance = dict()
-    tolerance['plane'] = 35
-    tolerance['plane_5l'] = 30
+    tolerance['plane'] = 25 # 30 # 35
+    tolerance['plane_5l'] = 25 # 30
     tolerance['tetrahedron'] = 10
     tolerance['plane_on_metal'] = 12.5
 
@@ -255,7 +255,10 @@ def update_output_dict(site_dict, op, pr, t, tf, spec,
     site_dict["problematic"] = pr
     for ti in t:
         if t[ti]:
-            site_dict["type"] = site_dict["type"]+','+str(ti)
+            if site_dict["type"] == 'closed':
+                site_dict["type"] = str(ti)
+            else:
+                site_dict["type"] = site_dict["type"]+','+str(ti)
 
     return site_dict
 
@@ -537,9 +540,6 @@ def check_if_open(system, tolerance):
     else:
         open_metal_mof, test, min_dihid, all_dihidrals = \
             check_non_metal_dihedrals(system, test, tolerance)
-        if num_l == 5 and not open_metal_mof:
-            open_metal_mof, test = check_metal_dihedrals(system,
-                                                         test, tolerance)
 
     return open_metal_mof, problematic, test, tf, min_dihid, all_dihidrals
 
@@ -592,59 +592,31 @@ def get_t6_factor(c):
     return c/180
 
 
-def check_metal_dihedrals(system, test, tolerance):
+def check_metal_dihedrals(system, oms_test, tolerance):
     num = system.num_sites
-    num_l = system.num_sites - 1
     open_metal_mof = False
     crit = dict()
     tol = dict()
-
     crit['plane'] = 180
     tol['plane'] = tolerance['plane']  # 30
 
-    all_dihedrals, all_indeces = obtain_metal_dihedrals(num, system)
-    min_dihedral = min(all_dihedrals)
+    all_dihedrals, all_indices = obtain_metal_dihedrals(num, system)
     number_of_planes = 0
-    for dihedral, indeces in zip(all_dihedrals, all_indeces):
-        [i, j, k, l] = indeces
+    for dihedral, indices in zip(all_dihedrals, all_indices):
+        [i, j, k, l] = indices
         if abs(dihedral - crit['plane']) < tol['plane'] \
                 or abs(dihedral - crit['plane']+180) < tol['plane']:
             number_of_planes += 1
-            other_indeces = find_other_indeces([0, j, k, l], num)
-            if len(other_indeces) > 2:
-                print('Something went terribly wrong')
-                input()
-            # dihedral_other1 = system.get_dihedral(other_indeces[0],j,k,l)
-            # dihedral_other2 = system.get_dihedral(other_indeces[1],j,k,l)
-            dihedrals_other = []
-            for o_i in other_indeces:
-                dihedrals_other.append(system.get_dihedral(j, k, l, o_i))
-            if not (check_positive(dihedrals_other)
-                    and check_negative(dihedrals_other)):
+            all_indices = find_other_indeces([0, j, k, l], num)
+            if check_if_atoms_on_same_site(all_indices, system, j, k, l):
                 open_metal_mof = True
-                test['metal_plane'] = True
+                oms_test[system[0], 'metal_plane'] = True
+                return open_metal_mof, oms_test
 
-    # i=0
-    # for j in range(1,num):
-    #    for k in range(1,num):
-    #        for l in range(1,num):
-    #    if (i==j or i==k or i==l or j==k or j==l or k==l):
-    #       pass
-    #    else:
-    #       dihedral=abs(system.get_dihedral(i,j,k,l))
-    #   if num_l == 5:
-
-    if number_of_planes == 4:
-        if open_metal_mof:
-            print('conflicting criteria')
-            input()
-        else:
-            open_metal_mof = False
-
-    return open_metal_mof, test
+    return open_metal_mof, oms_test
 
 
-def check_non_metal_dihedrals(system, test, tolerance):
+def check_non_metal_dihedrals(system, oms_test, tolerance):
     num = system.num_sites
     num_l = system.num_sites - 1
     crit = dict()
@@ -657,7 +629,7 @@ def check_non_metal_dihedrals(system, test, tolerance):
     tol['tetrahedron'] = tolerance['tetrahedron']  # 10
     open_metal_mof = False
     if num_l == 4:
-        test_type = 'tetrahedron'
+        test_type = 'plane' # 'tetrahedron'
         om_type = 'non_TD'
     elif num_l == 5:
         test_type = 'plane_5l'
@@ -670,40 +642,75 @@ def check_non_metal_dihedrals(system, test, tolerance):
     min_dihedral = min(all_dihedrals)
     for dihedral, indeces in zip(all_dihedrals, all_indeces):
         [i, j, k, l] = indeces
-        if num_l == 4:
+        if num_l == -4:
             if not (abs(dihedral - crit[test_type]) < tol[test_type]
                     or abs(dihedral - crit[test_type]+180) < tol[test_type]):
-                test[om_type] = True
-                test[test_type] = True
+                oms_test.update(dict.fromkeys([om_type, test_type], True))
                 open_metal_mof = True
         else:
             if abs(dihedral - crit[test_type]) < tol[test_type] \
                     or abs(dihedral - crit[test_type]+180) < tol[test_type]:
-                if num_l == 5:
-                    test[om_type] = True
-                    test[test_type] = True
+                if num_l <= 5:
+                    oms_test.update(dict.fromkeys([om_type, test_type], True))
                     open_metal_mof = True
                 elif num_l > 5:
                     if check_if_plane_on_metal(0, [i, j, k, l],
                                                system, tolerance):
                         other_indeces = find_other_indeces([0, i, j, k, l],
                                                            num)
-                        # check if other atoms are all in the same side
-                        # of the plane
-                        dihedrals_other = []
-                        for o_i in other_indeces:
-                            dihedrals = system.get_dihedral(j, k, l, o_i)
-                            dihedrals_other.append(dihedrals)
-                        if not (check_positive(dihedrals_other)
-                                and check_negative(dihedrals_other)):
-                            test[test_type] = True
-                            test[om_type] = True
+                        if check_if_atoms_on_same_site(other_indeces,
+                                                       system, j, k, l):
+                            oms_test.update(dict.fromkeys([om_type, test_type],
+                                                      True))
                             open_metal_mof = True
 
-    return open_metal_mof, test, min_dihedral, all_dihedrals
+    if (num_l >= 4) and not open_metal_mof:
+        open_metal_mof, test = check_metal_dihedrals(system, oms_test, tolerance)
+
+    return open_metal_mof, oms_test, min_dihedral, all_dihedrals
+
+
+def check_if_atoms_on_same_site(other_indeces, system, j, k, l):
+    dihedrals_other = []
+    for o_i in other_indeces:
+        dihedrals_other.append(system.get_dihedral(j, k, l, o_i))
+    if not (check_positive(dihedrals_other) and
+                check_negative(dihedrals_other)):
+        return True
+    return False
 
 
 def obtain_dihedrals(num, system):
+    all_dihedrals = []
+    indeces = []
+
+    indices_1 = range(1, num)
+    indices_2 = range(1, num)
+    for i, l in itertools.combinations(indices_1, 2):
+        for j, k in itertools.combinations(indices_2, 2):
+            if len({i, j, k, l}) == 4:
+                dihedral = abs(system.get_dihedral(i, j, k, l))
+                all_dihedrals.append(dihedral)
+                indeces.append([i, j, k, l])
+
+    return all_dihedrals, indeces
+
+
+def obtain_metal_dihedrals(num, system):
+    all_dihedrals = []
+    indeces = []
+    indices_1 = range(1, num)
+    i = 0
+    for l in indices_1:
+        for j, k in itertools.permutations(indices_1, 2):
+            if len({i, j, k, l}) == 4:
+                dihedral = abs(system.get_dihedral(i, j, k, l))
+                all_dihedrals.append(dihedral)
+                indeces.append([i, j, k, l])
+
+    return all_dihedrals, indeces
+
+def obtain_dihedrals_old(num, system):
     all_dihedrals = []
     indeces = []
     for i in range(1, num):
@@ -717,10 +724,28 @@ def obtain_dihedrals(num, system):
                         dihedral = abs(system.get_dihedral(i, j, k, l))
                         all_dihedrals.append(dihedral)
                         indeces.append([i, j, k, l])
+    all_dihedrals = [round(x, 5) for x in all_dihedrals]
+    # print(set(all_dihedrals))
+    # print('------')
+    all_dihedrals_new = []
+    indices_1 = range(1, num)
+    indices_2 = range(1, num)
+    for i, l in itertools.combinations(indices_1, 2):
+        for j, k in itertools.combinations(indices_2, 2):
+            if len({i, j, k, l}) == 4:
+                dihedral = abs(system.get_dihedral(i, j, k, l))
+                all_dihedrals_new.append(dihedral)
+                # indeces.append([i, j, k, l])
+    all_dihedrals_new = [round(x, 5) for x in all_dihedrals_new]
+    for ang in all_dihedrals:
+        if ang not in all_dihedrals_new:
+            print('ERROR')
+            input()
+    # print(set(all_dihedrals_new))
+    # input()
     return all_dihedrals, indeces
 
-
-def obtain_metal_dihedrals(num, system):
+def obtain_metal_dihedrals_old(num, system):
     all_dihedrals = []
     indeces = []
     i = 0
@@ -733,6 +758,20 @@ def obtain_metal_dihedrals(num, system):
                     dihedral = abs(system.get_dihedral(i, j, k, l))
                     all_dihedrals.append(dihedral)
                     indeces.append([i, j, k, l])
+    all_dihedrals = [round(x, 5) for x in all_dihedrals]
+    all_dihedrals_new = []
+    indices_1 = range(1, num)
+    i = 0
+    for j, k, l in itertools.combinations(indices_1, 3):
+        if len({i, j, k, l}) == 4:
+            dihedral = abs(system.get_dihedral(i, j, k, l))
+            all_dihedrals_new.append(dihedral)
+            # indeces.append([i, j, k, l])
+    all_dihedrals_new = [round(x, 5) for x in all_dihedrals]
+    for ang in all_dihedrals:
+        if ang not in all_dihedrals_new:
+            print('ERROR METAL')
+            input()
     return all_dihedrals, indeces
 
 
