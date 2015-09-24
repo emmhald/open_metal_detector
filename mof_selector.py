@@ -25,21 +25,25 @@ from pymatgen.io.smartio import read_structure, write_structure
 import argparse
 from atomic_parameters import atoms as ap
 
+
 def main():
     parser = argparse.ArgumentParser(description='Split file into batches')
     parser.add_argument('-p','--parameter_file', nargs='?',help='Name of parameters file', default = 'parameters.txt')
     parser.add_argument('-o','--output_folder', nargs='?',help='Name of output folder', default = 'output')
+    parser.add_argument('-a','--analysis_folder', nargs='?',help='Name of analysis folder', default = 'analysis')
     parser.add_argument('-e','--target_element', nargs='?',help='Specify element to collect structures containing it', default = None)
 
     args = parser.parse_args()
     output_folder = args.output_folder
+    analysis_folder = args.analysis_folder
     parameters_file = args.parameter_file
     ele = args.target_element
     json_dicts = load_structures(output_folder, parameters_file)
-    analyze_for_tfac_using_json(json_dicts)
-    collect_statistics(json_dicts)
+    analyze_for_tfac_using_json(json_dicts, analysis_folder)
+    collect_statistics(json_dicts, analysis_folder)
     if ele:
-        analyse_results(json_dicts, ele, output_folder)
+        analyse_results(json_dicts, ele, analysis_folder, output_folder)
+
 #    analyze_for_tfac()
 #    for m in atoms().metals:
 #        analyse_results(m)
@@ -78,10 +82,11 @@ def load_structures(output_folder, parameter_file):
                 json_dicts.append(json_dict)
     return json_dicts
 
-def analyze_for_tfac_using_json(json_dicts):
-    tfac_analysis_folder = 'analysis/tfac_analysis'
-    make_folder('analysis')
-    make_folder('analysis/tfac_analysis')
+
+def analyze_for_tfac_using_json(json_dicts, analysis_folder):
+    tfac_analysis_folder = analysis_folder+'/tfac_analysis'
+    make_folder(analysis_folder)
+    make_folder(tfac_analysis_folder)
 
 #    tfac_analysis_folder='analysis/tfac_analysis_redo_all'
 #    tfac_analysis_folder='analysis/tfac_analysis_t5'
@@ -91,7 +96,7 @@ def analyze_for_tfac_using_json(json_dicts):
     no_5 = open(tfac_analysis_folder+'/no_5.out','w')
     yes_6 = open(tfac_analysis_folder+'/yes_6.out','w')
     no_6 = open(tfac_analysis_folder+'/no_6.out','w')
-    #r = re.compile("([a-zA-Z]+)(-?(?:\d+())?(?:\.\d*())?(?:e-?\d+())?(?:\2|\1\3))")
+    #r = re.compile("([a-zA-Z]+)(-?(?:\d+())?(?:\.\d*())?(?:e-?\d+())?(?:\©|\1\3))")
 
 #    with open(output_folder+'/summary.out','r') as summary:
     yes_or_no = dict()
@@ -106,15 +111,15 @@ def analyze_for_tfac_using_json(json_dicts):
     #            continue
 
     for json_dict in json_dicts:
-        struc=json_dict['material_name']
+        struc = json_dict['material_name']
         num_of_ligands = fetch_num_of_ligands(json_dict)
         om_type = fetch_if_open(json_dict)
         tfactors = fetch_t_factor(json_dict)
         for L, typ, tf in zip(num_of_ligands,om_type,tfactors):
             if int(L) > 3 and int(L) < 7:
                 outfile = yes_or_no[typ]+'_'+str(L)
-                print(outfile,struc,yes_or_no[typ],tf)
-                print(struc,yes_or_no[typ],tf,file=eval(outfile))
+                # print(outfile,struc,yes_or_no[typ],tf)
+                print(struc, yes_or_no[typ], tf, file=eval(outfile))
 
     print('okay')
     yes_no_list = ['yes','no']
@@ -130,15 +135,17 @@ def analyze_for_tfac_using_json(json_dicts):
             eval(outfile).close()
             print(yn,i)
             if len(tfac_list) > 0:
-                hist, edges = np.histogram(tfac_list,bins=50,range=(0,1),density=True)
+                hist, edges = np.histogram(tfac_list, bins=50, range=(0, 1),
+                                           density=True)
                 hist_file = open(tfac_analysis_folder+'/'+outfile+'_hist.out','w')
                 w=(edges[1]-edges[0])/2
                 for e,h in zip(edges,hist):
                     print(e+w,h,file=hist_file)
 
-def collect_statistics(json_dicts):
-    count_open=0.0
-    stats=dict()
+
+def collect_statistics(json_dicts, analysis_folder):
+    count_open = 0.0
+    stats = dict()
     for json_dict in json_dicts:
         metal_sites=json_dict['metal_sites']
         for ms in metal_sites:
@@ -190,8 +197,8 @@ def collect_statistics(json_dicts):
             stats[metal][tfac]+=1
 
         if len(number_of_linkers) > 0:
-            if min(number_of_linkers) < 0:
-                dest='analysis/L_'+str(min(number_of_linkers))+'/'
+            if min(number_of_linkers) == 0 :
+                dest=analysis_folder+'/L_'+str(min(number_of_linkers))+'/'
                 copy_folder(dest , json_dict['source_name'])
 
     # This returns a sorted tuple based on keyfunc, which uses the key count_open to reverse sort the stats dictionary
@@ -240,6 +247,7 @@ def collect_statistics(json_dicts):
         #print "{0:6}{1:11}{2:15}{3:6}{4:6}{5:6}".format(*p)
         #print "{0:3}{1:6}{2:8}{3:>8}{4:6}{5:6}{6:6}{7:6}{8:6}{9:6}{10:6}{11:6}".format(*p)
         print("{0:6}{1:^12}{2:^18}{3:^12}{4:^16}{5:^6}{6:^6}{7:^6}{8:^6}{9:^6}{10:^6}{11:^8}{12:^8}".format(*p))
+
 
 def copy_folder(dest, src):
     if not os.path.exists(dest):
@@ -416,7 +424,7 @@ def analyse_results_sa():
 #    plt.show()
 
 
-def analyse_results(json_dicts, element, output_folder):
+def analyse_results(json_dicts, element, analysis_folder, output_folder):
 
     folder = 'analysis/selected_mofs/'+element
     cif_folder_out = 'analysis/selected_mofs/'+element+'/cif_files'
@@ -425,7 +433,7 @@ def analyse_results(json_dicts, element, output_folder):
     if not os.path.exists(cif_folder_out):
         os.makedirs(cif_folder_out)
     summary_ele = open(folder+'/summary.out','w')
-    cif_folder = output_folder+'/open_metal_mofs/'
+    cif_folder = analysis_folder+'/open_metal_mofs/'
     summary = open('summary.out','a')
 
     print('MOF','#OMS','#OMS_types','OMS ids','#OMS_per_type')
