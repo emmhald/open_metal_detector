@@ -29,7 +29,6 @@ import json
 import argparse
 import pymatgen.io.xyzio as xyzio
 import itertools
-import yappi
 
 
 def main():
@@ -163,7 +162,6 @@ def analyze_structure(filename, uc_params, sfile, cont, source_folder,
     m_sa_frac, m_surface_area = 0.0, 0.0
     # m_sa_frac,m_surface_areaget_metal_surface_areas(metal,system)
 
-    # yappi.start()
 
     # first_coordination_structure, first_coordnation_structure_each_metal =
     # find_first_coordination_sphere(metal, system)
@@ -200,7 +198,6 @@ def analyze_structure(filename, uc_params, sfile, cont, source_folder,
         output_json['metal_sites'].append(site_dict)
 
     print('Checking for OMSs done. Writing files')
-    # yappi.get_func_stats().print_all()
 
     summary = write_summary(output_json)
     # if open_metal_site:
