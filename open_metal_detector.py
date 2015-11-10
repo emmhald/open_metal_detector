@@ -7,12 +7,6 @@ Created on %(date)s
 from __future__ import print_function
 import sys
 import os
-# sys.path.append('~/Dropbox/Work/python/modules')
-path = os.path.expanduser('~/Dropbox/Work/python/modules')
-# path = os.path.expanduser('~/dropbox/Work/python/modules')
-if path not in sys.path:
-    sys.path.insert(1, path)
-del path
 from xyz_read import xyz_file
 from pymatgen import Lattice, Structure
 from pymatgen.io.cifio import CifParser
