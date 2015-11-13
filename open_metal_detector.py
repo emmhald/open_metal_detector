@@ -37,7 +37,7 @@ def main():
                         default='CORE-MOF-DB-June2014')
     parser.add_argument('-o', '--folder_out', nargs='?',
                         help='Folder with structure files', default='output')
-    parser.add_argument('--continue_run', dest='continue_run',
+    parser.add_argument('-c', '--continue_run', dest='continue_run',
                         action='store_true')
     parser.add_argument('--attach_sorbate', dest='attach_sorbate',
                         action='store_true')
@@ -65,7 +65,7 @@ def main():
     t0 = time.time()
     with open(params_filename, 'r') as params_file:
         if not cont:
-            clear_files(sfile, cont, target_folder)
+            clear_files(sfile, target_folder)
         for i, struc in enumerate(params_file):
             t0s = time.time()
 
@@ -83,15 +83,11 @@ def main():
         print('\n Total Time', t1-t0)
 
 
-def clear_files(sfile, cont, target_folder):
-    make_folder('output')
-    file_type = 'w'
-    open_metal_mofs = open('output/open_metal_mofs.out', file_type)
-    problematic_mofs = open('output/problematic.gcd', file_type)
-    summary_mofs = open('output/'+sfile, file_type)
-    open_metal_mofs.close()
-    problematic_mofs.close()
-    summary_mofs.close()
+def clear_files(sfile, target_folder):
+    make_folder(target_folder)
+    open(target_folder+'open_metal_mofs.out', 'w').close()
+    open(target_folder+'problematic.gcd', 'w').close()
+    open(target_folder+sfile, 'w').close()
 
 
 def make_folder(folder):
