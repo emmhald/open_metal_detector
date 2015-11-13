@@ -7,7 +7,6 @@ Created on %(date)s
 from __future__ import print_function
 import sys
 import os
-from xyz_read import xyz_file
 from pymatgen import Lattice, Structure
 from pymatgen.io.cifio import CifParser
 from pymatgen.io.cifio import CifWriter
@@ -69,14 +68,12 @@ def main():
             clear_files(sfile, cont, target_folder)
         for i, struc in enumerate(params_file):
             t0s = time.time()
-            uc_params = []
+
             line_elements = shlex.split(struc)
             filename = line_elements[0]
-            if filename.split('.')[0] == 'xyz':
-                for j in range(1, 7):
-                    uc_params.append(float(line_elements[j]))
-            analyze_structure(filename, uc_params, sfile, cont, source_folder,
+            analyze_structure(filename, sfile, cont, source_folder,
                               target_folder, attach_ads, tolerance)
+
             t1s = time.time()
             print('Time:', t1s-t0s)
             if i+1 >= number_of_structures:
@@ -112,7 +109,7 @@ def delete_folder(folder_path):
                 shutil.rmtree(file_object_path)
 
 
-def analyze_structure(filename, uc_params, sfile, cont, source_folder,
+def analyze_structure(filename, sfile, cont, source_folder,
                       target_folder, attach_ads, tolerance):
 
     filetype = filename.split('.')[-1]
@@ -132,16 +129,7 @@ def analyze_structure(filename, uc_params, sfile, cont, source_folder,
     problematic_mofs = open(target_folder+'problematic.out', 'a')
     summary_mofs = open(target_folder+sfile, 'a')
 
-    if filetype == 'xyz':
-        xyz = xyz_file()
-        xyz.filename_in = source_folder+filename
-        if not os.path.isfile(xyz.filename_in):
-            print('File not found', xyz.filename_in)
-            return
-        xyz.load_parameters(uc_params)
-        xyz.open()
-        lattice, system = make_system_from_xyz(xyz)
-    elif filetype == 'cif':
+    if filetype == 'cif':
         lattice, system = make_system_from_cif(source_folder+filename)
     else:
         sys.exit('Do not know this filetype')
