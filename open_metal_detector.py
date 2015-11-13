@@ -57,8 +57,8 @@ def main():
     sfile = args.summary_file
 
     tolerance = dict()
-    tolerance['plane'] = 25 # 30 # 35
-    tolerance['plane_5l'] = 25 # 30
+    tolerance['plane'] = 25  # 30 # 35
+    tolerance['plane_5l'] = 25  # 30
     tolerance['tetrahedron'] = 10
     tolerance['plane_on_metal'] = 12.5
 
@@ -80,7 +80,7 @@ def main():
                 break
         params_file.close()
         t1 = time.time()
-        print('Total Time', t1-t0)
+        print('\n Total Time', t1-t0)
 
 
 def clear_files(sfile, cont, target_folder):
@@ -118,7 +118,7 @@ def analyze_structure(filename, sfile, cont, source_folder,
     output_folder = target_folder+mof_name
     json_file_out = output_folder+'/'+mof_name+'.json'
     if cont and os.path.exists(json_file_out):
-        print(mof_name, 'has run already... skipping')
+        print(mof_name, 'has been processed already... skipping')
         return
     delete_folder(output_folder)
     make_folder(output_folder)
@@ -138,7 +138,7 @@ def analyze_structure(filename, sfile, cont, source_folder,
 
     metal, organic = split_structure_to_organic_and_metal(system)
     if metal.num_sites == 0:
-        print(mof_name+' not metal was found in structure', end="",
+        print(mof_name+' : No metal was found in structure', end="",
               file=summary_mofs)
         summary_mofs.close()
         return
@@ -146,13 +146,10 @@ def analyze_structure(filename, sfile, cont, source_folder,
     m_sa_frac, m_surface_area = 0.0, 0.0
     # m_sa_frac,m_surface_areaget_metal_surface_areas(metal,system)
 
-
-    # first_coordination_structure, first_coordnation_structure_each_metal =
-    # find_first_coordination_sphere(metal, system)
-    first_coordnation_structure_each_metal = \
-        find_all_coord_spheres(metal, system)
-    output_json = \
-        get_output_dict(mof_name, m_surface_area, m_sa_frac, system.volume)
+    first_coordnation_structure_each_metal = find_all_coord_spheres(metal,
+                                                                    system)
+    output_json = get_output_dict(mof_name, m_surface_area, m_sa_frac,
+                                  system.volume)
 
     cs_list = []  # list of coordination sequences for each open metal found
     for m, open_metal_candidate \
@@ -441,7 +438,6 @@ def find_first_coordination_sphere(metal, structure_full):
 def make_system_from_cif(ciffile):
     cif = CifParser(ciffile)
     system = cif.get_structures(primitive=False)
-    print(ciffile)
     return system[0].lattice, system[0]
 
 
@@ -693,6 +689,7 @@ def obtain_metal_dihedrals(num, system):
 
     return all_dihedrals, indeces
 
+
 def obtain_dihedrals_old(num, system):
     all_dihedrals = []
     indeces = []
@@ -700,7 +697,6 @@ def obtain_dihedrals_old(num, system):
         for j in range(1, num):
             for k in range(1, num):
                 for l in range(1, num):
-                    # print(i,j,k,l)
                     if i == j or i == k or i == l or j == k or j == l or k == l:
                         pass
                     else:
@@ -708,8 +704,6 @@ def obtain_dihedrals_old(num, system):
                         all_dihedrals.append(dihedral)
                         indeces.append([i, j, k, l])
     all_dihedrals = [round(x, 5) for x in all_dihedrals]
-    # print(set(all_dihedrals))
-    # print('------')
     all_dihedrals_new = []
     indices_1 = range(1, num)
     indices_2 = range(1, num)
@@ -724,9 +718,8 @@ def obtain_dihedrals_old(num, system):
         if ang not in all_dihedrals_new:
             print('ERROR')
             input()
-    # print(set(all_dihedrals_new))
-    # input()
     return all_dihedrals, indeces
+
 
 def obtain_metal_dihedrals_old(num, system):
     all_dihedrals = []
@@ -827,8 +820,9 @@ def add_co2_simple(structure, oms_index, end_to_end, eles):
 
 
 def find_adsorption_site(system, center, prob_dist):
-    # find the adsorption site by maximizing the distance from all the atoms while
-    # keep the distance fixed at some predefined distace
+    # find the adsorption site by maximizing the distance
+    # from all the atoms while keep the distance fixed
+    # at some predefined distace
     tries = 10000
     sum_distance = []
     probe_positions = []
