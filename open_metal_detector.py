@@ -115,7 +115,9 @@ def delete_folder(folder_path):
 def analyze_structure(filename, uc_params, sfile, cont, source_folder,
                       target_folder, attach_ads, tolerance):
 
-    mof_name = filename.split('.')[0]
+    filetype = filename.split('.')[-1]
+    mof_name = filename.split('.'+filetype)[0]
+
     output_folder = target_folder+mof_name
     json_file_out = output_folder+'/'+mof_name+'.json'
     if cont and os.path.exists(json_file_out):
@@ -129,7 +131,7 @@ def analyze_structure(filename, uc_params, sfile, cont, source_folder,
     open_metal_mofs = open(target_folder+'open_metal_mofs.out', 'a')
     problematic_mofs = open(target_folder+'problematic.out', 'a')
     summary_mofs = open(target_folder+sfile, 'a')
-    filetype = filename.split('.')[-1]
+
     if filetype == 'xyz':
         xyz = xyz_file()
         xyz.filename_in = source_folder+filename
@@ -330,7 +332,9 @@ def write_summary(output_json):
 
 
 def write_xyz_file(filename, system):
-    xyzio.XYZ(system).write_file(filename+'.xyz')
+    if not filename[-4:] == '.xyz':
+        filename += '.xyz'
+    xyzio.XYZ(system).write_file(filename)
 
 
 def find_all_coord_spheres(centers, structure):
