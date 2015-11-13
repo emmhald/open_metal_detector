@@ -8,19 +8,19 @@ from __future__ import print_function
 import sys
 import os
 from pymatgen import Lattice, Structure
-from pymatgen.io.cifio import CifParser
-from pymatgen.io.cifio import CifWriter
+from pymatgen.io.cif import CifParser
+from pymatgen.io.cif import CifWriter
+import pymatgen.io.xyz as xyzio
 import numpy as np
 import shlex
 import shutil
 import time
 import math
 import random
-import pymatgen.io.smartio as sio
 from atomic_parameters import atoms as ap
 import json
 import argparse
-import pymatgen.io.xyzio as xyzio
+
 import itertools
 
 
