@@ -59,11 +59,11 @@ def main():
 def read_json(filename):
 
     try:
-        json_filename = filename.split('.')[0]+'.JSON'
+        json_filename = filename+'.JSON'
         json_dict = json.load(open(json_filename))
     except:
         try:
-            json_filename = filename.split('.')[0]+'.json'
+            json_filename = filename+'.json'
             json_dict = json.load(open(json_filename))
         except:
             return False
@@ -76,8 +76,11 @@ def load_structures(output_folder, parameter_file):
     json_dicts = []
     with open(parameter_file, 'r') as parameters:
         for l in parameters:
-            struc = l.split('.')[0]
-            json_dict = read_json(output_folder+'/'+struc+'/'+struc)
+            filetype = l.split('.')[-1]
+            struc = l.split('.'+filetype)[0]
+            #struc = l.split('.')[0]
+            json_file = output_folder+'/'+struc+'/'+struc
+            json_dict = read_json(json_file)
             # if not json_dict:
             #    continue
             if isinstance(json_dict, dict):
@@ -263,6 +266,8 @@ def collect_statistics(json_dicts, analysis_folder):
         printouts.append(printout)
 
     print("Total MOFs:     ", len(json_dicts))
+    if len(json_dicts) == 0:
+        return
     print("Open Metal MOFs: {0:} {1:.2f} %"
           .format(int(count_open), 100.0 * count_open/len(json_dicts)))
     titles = ['Metal', 'All Found', 'Open-Metal', 'Open-Metal-Site',
