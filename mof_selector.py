@@ -406,7 +406,7 @@ def analyse_results(json_dicts, element, analysis_folder, output_folder):
     if not os.path.exists(cif_folder_out):
         os.makedirs(cif_folder_out)
     summary_ele = open(folder+'/summary.out', 'w')
-    cif_folder = analysis_folder+'/open_metal_mofs/'
+    cif_folder = output_folder+'/open_metal_mofs/'
     summary = open('summary.out', 'a')
 
     print('MOF', '#OMS', '#OMS_types', 'OMS ids', '#OMS_per_type')
@@ -435,7 +435,7 @@ def analyse_results(json_dicts, element, analysis_folder, output_folder):
             # copy_folder(folder+'/'+struc , ads_folder)
             if not os.path.exists(folder+'/'+struc):
                 os.makedirs(folder+'/'+struc)
-            if 1 == 2:
+            if 1 == 1:
 
                 cif_name = struc+'.cif'
                 print(cif_name, '-', len(oms_ids), '-', len(set(oms_ids)),
@@ -458,7 +458,7 @@ def analyse_results(json_dicts, element, analysis_folder, output_folder):
                 # print(folder+'/'+struc+'/POSCAR_'+struc)
                 # ads_folder='../detect_open_metal_sites/July_2014_runs/output/'+struc
 
-            if 1 == 2:
+            if 1 == 1:
                 for ads_type in ['co2', 'n2']:
                     om_count = -1
                     while True:
