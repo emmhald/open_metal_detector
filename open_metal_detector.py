@@ -255,7 +255,7 @@ def unique_site(oms_index, system, cs_list, output_folder, mof_name):
 
         output_filename = mof_filename
         output_filename += '_first_coordination_sphere_with_co2_'
-        output_filename = str(oms_id)+'.cif'
+        output_filename += str(oms_id)+'.cif'
         cif.write_file(output_filename)
 
         end_to_end = 1.1
@@ -267,7 +267,7 @@ def unique_site(oms_index, system, cs_list, output_folder, mof_name):
         cif = CifWriter(mof_with_co2)
         output_filename = mof_filename
         output_filename += 'first_coordination_sphere_with_n2'
-        output_filename = str(oms_id)+'.cif'
+        output_filename += str(oms_id)+'.cif'
         cif.write_file(output_filename)
     return oms_id, cs_list
 
