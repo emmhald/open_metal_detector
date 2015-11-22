@@ -10,6 +10,8 @@ import os
 from pymatgen import Lattice, Structure
 from pymatgen.io.cif import CifParser
 from pymatgen.io.cif import CifWriter
+from pymatgen import Molecule
+from pymatgen.io.xyz import XYZ
 import pymatgen.io.xyz as xyzio
 import numpy as np
 import shlex
@@ -20,8 +22,9 @@ import random
 from atomic_parameters import atoms as ap
 import json
 import argparse
-
 import itertools
+
+PI = np.pi
 
 
 def main():
@@ -44,6 +47,8 @@ def main():
     parser.add_argument('-m', '--max_structures', nargs='?', default=10000000,
                         const=10000000, type=int,
                         help='The maximum number of structures to run')
+    parser.add_argument('-mf', '--molecule_file', nargs='?',
+                        help='xyz coordinates of molecule',default='ethane.txt')
     parser.set_defaults(continue_run=False)
     parser.set_defaults(attach_sorbate=False)
 
@@ -55,6 +60,7 @@ def main():
     target_folder = args.folder_out+'/'
     number_of_structures = args.max_structures
     sfile = args.summary_file
+    molecule_file = args.molecule_file
 
     tolerance = dict()
     tolerance['plane'] = 25  # 30 # 35
@@ -72,7 +78,7 @@ def main():
             line_elements = shlex.split(struc)
             filename = line_elements[0]
             analyze_structure(filename, sfile, cont, source_folder,
-                              target_folder, attach_ads, tolerance)
+                              target_folder, attach_ads, molecule_file,tolerance)
 
             t1s = time.time()
             print('Time:', t1s-t0s)
@@ -106,11 +112,11 @@ def delete_folder(folder_path):
 
 
 def analyze_structure(filename, sfile, cont, source_folder,
-                      target_folder, attach_ads, tolerance):
+                      target_folder, attach_ads,molecule_file, tolerance):
 
     filetype = filename.split('.')[-1]
     mof_name = filename.split('.'+filetype)[0]
-
+    molecule_filetype = molecule_file.split('.')[-1]
     output_folder = target_folder+mof_name
     json_file_out = output_folder+'/'+mof_name+'.json'
     if cont and os.path.exists(json_file_out):
@@ -163,8 +169,8 @@ def analyze_structure(filename, sfile, cont, source_folder,
                                         open_metal_candidate.frac_coords[0],
                                         system)
                 site_dict["oms_id"], cs_list = \
-                    unique_site(oms_index, system, cs_list,
-                                output_folder, mof_name)
+                    unique_site_simple(oms_index, system, cs_list,
+                                output_folder, mof_name,molecule_file) # general way to add adsorbate (still debugging)
             if not output_json['metal_sites_found']:
                 output_json['metal_sites_found'] = True
             if pr:
@@ -237,7 +243,7 @@ def update_output_dict(site_dict, op, pr, t, tf, spec,
     return site_dict
 
 
-def unique_site(oms_index, system, cs_list, output_folder, mof_name):
+def unique_site(oms_index, system, cs_list, output_folder, mof_name,molecule_file):
     cs = find_coordination_sequence(oms_index, system)
     oms_id, new_site = find_oms_id(cs_list, cs)
     mof_filename = output_folder+'/'+mof_name
@@ -269,6 +275,19 @@ def unique_site(oms_index, system, cs_list, output_folder, mof_name):
         output_filename += 'first_coordination_sphere_with_n2'
         output_filename += str(oms_id)+'.cif'
         cif.write_file(output_filename)
+
+        end_to_end = 1.54
+        eles = ['C','C']
+        ads = add_co2_simple(system,oms_index,end_to_end,eles)
+        mof_with_ethane = merge_structures(ads,system)
+        cif = CifWriter(ads)
+        cif.write_file(mof_filename+'_ethane_'+str(oms_id)+'.cif')
+        cif = CifWriter(mof_with_ethane)
+        output_filename = mof_filename
+        output_filename += 'first_coordination_sphere_with_ethane'
+        output_filename += str(oms_id)+'.cif'
+        cif.write_file(output_filename)
+
     return oms_id, cs_list
 
 
@@ -746,7 +765,6 @@ def obtain_metal_dihedrals_old(num, system):
             input()
     return all_dihedrals, indeces
 
-
 def add_co2(v1, v2, v3, v4, system):
     ads_dist = 2.2
     # old method for adding co2.
@@ -775,7 +793,6 @@ def add_co2(v1, v2, v3, v4, system):
                         in zip(p1, p2)]+system.cart_coords[0]
         co2_vector_C_f = system.lattice.get_fractional_coords(co2_vector_c)
         co2_vector_O_f = system.lattice.get_fractional_coords(co2_vector_o)
-
 
 def add_co2_simple(structure, oms_index, end_to_end, eles):
 
@@ -814,11 +831,152 @@ def add_co2_simple(structure, oms_index, end_to_end, eles):
     print('Min adsorbate distance from framework:', min(dists), max(dists))
     return Structure(structure.lattice, adsorption_site, adsorption_pos)
 
+def unique_site_simple(oms_index, system, cs_list, output_folder, mof_name, molecule_file):
+    cs = find_coordination_sequence(oms_index, system)
+    oms_id, new_site = find_oms_id(cs_list, cs)
+    mof_filename = output_folder+'/'+mof_name
+    molecule_name = molecule_file.split('.'+'prm')[0]
+    if new_site:
+        print('New site found')
+        cs_list.append(cs)
+        ads = add_adsorbate_testing(system, oms_index, molecule_file)
+        #ads = add_adsorbate_simple(system,oms_index,molecule_file)
+        mof_with_adsorbate = merge_structures(ads, system)
+        cif = CifWriter(ads)
+        cif.write_file(mof_filename+'_'+molecule_name+str(oms_id)+'_1.cif')
+        cif = CifWriter(mof_with_adsorbate)
+        output_filename = mof_filename
+        output_filename += '_first_coordination_sphere_with_'+molecule_name
+        output_filename += str(oms_id)+'_1.cif'
+        cif.write_file(output_filename)
+
+    return oms_id, cs_list
+
+def adsorbate_rotation(system, pos, adsorbate_xyz_com_origin,atom_type):
+    coords3 = []
+    inverse_matrix = system.lattice.inv_matrix
+    # building rotation matrix R
+    R = np.zeros((3,3),float)
+    R[:,0] = RandomNumberOnUnitSphere()
+    m = RandomNumberOnUnitSphere()
+    R[:,1] = m - np.dot(m, R[:,0]) * R[:,0] # subtract of component along co1 so it is orthogonal
+    R[:,1] = R[:,1] / np.linalg.norm(R[:,1])
+    R[:,2] = np.cross(R[:,0], R[:,1])
+    R=R.tolist()
+
+    # rotate the molecule
+    new_xyz = np.dot(adsorbate_xyz_com_origin,R) + pos
+
+    # transform the coordinates of molecule to be in the unit cell
+    for j, line in enumerate(new_xyz):
+        s_x = inverse_matrix[0][0] * line[0] + inverse_matrix[0][1] * line[1] + inverse_matrix[0][2] * line[2]
+        s_y = inverse_matrix[1][0] * line[0] + inverse_matrix[1][1] * line[1] + inverse_matrix[1][2] * line[2]
+        s_z = inverse_matrix[2][0] * line[0] + inverse_matrix[2][1] * line[1] + inverse_matrix[2][2] * line[2]
+        coords3.append([float(s_x),float(s_y),float(s_z)])
+
+    return coords3
+
+def adsorbate_placement(system, molecule_file, ads_vector):
+    # read in pre-defined molecule
+    tmp_molecule = open(molecule_file, 'r').readlines()
+    coords, atom_type, ads_vector_f = [], [], []
+    for line in tmp_molecule:
+        a = line.split()[0]
+        x = line.split()[1]
+        y = line.split()[2]
+        z = line.split()[3]
+        coords.append([float(x),float(y),float(z)])
+        atom_type.append(str(a))
+    mol = Molecule(atom_type, coords)
+    # get the center of mass position of the molecule
+    com = mol.center_of_mass # in cartesian coordinate
+    coords2, adsorbate_xyz_com_origin = [], []
+
+    # shift molecule so that the center of mass is at the oms
+    for line in tmp_molecule:
+        x = float(line.split()[1]) - float(ads_vector[0][0])
+        y = float(line.split()[2]) - float(ads_vector[0][1])
+        z = float(line.split()[3]) - float(ads_vector[0][2])
+        coords2.append([float(x),float(y),float(z)])
+
+    # shift molecule to center the center of mass to the origin
+    for line in tmp_molecule:
+        x = float(line.split()[1]) - float(com[0])
+        y = float(line.split()[2]) - float(com[1])
+        z = float(line.split()[3]) - float(com[2])
+        adsorbate_xyz_com_origin.append([float(x),float(y),float(z)])
+
+    return coords2, atom_type, adsorbate_xyz_com_origin
+
+def adsorbate_framework_overlap(system, com_frac, atom_type):
+    for i, dist in enumerate(com_frac):
+        distances = system.lattice.get_all_distances(com_frac[i],system.frac_coords)
+        for j, dist2 in enumerate(distances[0]):
+            if (dist2 - (ap.get_vdf_radius(str(atom_type[i])) + ap.get_vdf_radius(str(system.species[j])))) < -1e-4:
+                return True
+    return False
+
+def add_adsorbate_simple(system, oms_index, molecule_file):
+    ads_dist = 2.0
+    ads_vector = []
+    overlap = 0
+    counter = 0
+    while overlap == 0:
+        counter+=1
+        print("step: ", counter)
+        # find a position *ads_dist* away from oms
+        ads_vector.append(find_adsorption_site(system,
+                                           system.cart_coords[oms_index],
+                                           ads_dist)) # cartesian coordinate as an output
+        com_xyz, atom_type, adsorbate_xyz_com_origin = adsorbate_placement(system,molecule_file, ads_vector)
+        new_frac  = adsorbate_rotation(system, com_xyz, adsorbate_xyz_com_origin,atom_type)
+        # check for the overlap between adsorbate and system
+        overlap = adsorbate_framework_overlap(system, new_frac, atom_type)
+        if overlap:
+            print("overlap ...")
+            overlap = 0
+        else:
+            break
+
+    mol = Structure(system.lattice, atom_type, new_frac)
+    return mol
+
+def add_adsorbate_testing(system, oms_index, molecule_file):
+    ads_dist = 2.0
+    ads_vector = []
+    overlap = 0
+    counter = 0
+    # find a position *ads_dist* away from oms
+    ads_vector.append(find_adsorption_site(system,
+                                           system.cart_coords[oms_index],
+                                           ads_dist)) # cartesian coordinate as an output
+    inverse_matrix = system.lattice.inv_matrix
+    coords3 = []
+    atom_type = ['Xe']
+    for j, line in enumerate(new_xyz):
+        s_x = inverse_matrix[0][0] * line[0] + inverse_matrix[0][1] * line[1] + inverse_matrix[0][2] * line[2]
+        s_y = inverse_matrix[1][0] * line[0] + inverse_matrix[1][1] * line[1] + inverse_matrix[1][2] * line[2]
+        s_z = inverse_matrix[2][0] * line[0] + inverse_matrix[2][1] * line[1] + inverse_matrix[2][2] * line[2]
+        coords3.append([float(s_x),float(s_y),float(s_z)])
+
+    mol = Structure(system.lattice, atom_type, coords3)
+    return mol
+
+def RandomNumberOnUnitSphere():
+    thetha = 0.0
+    phi = 0.0
+    theta = 2*PI*np.random.random_sample()
+    phi = np.arccos(2*np.random.random_sample()-1.0)
+    x = np.cos(theta)*np.sin(phi)
+    y = np.sin(theta)*np.sin(phi)
+    z = np.cos(phi)
+    return x,y,z
+
 
 def find_adsorption_site(system, center, prob_dist):
     # find the adsorption site by maximizing the distance
     # from all the atoms while keep the distance fixed
-    # at some predefined distace
+    # at some predefined distance
     tries = 10000
     sum_distance = []
     probe_positions = []
@@ -964,7 +1122,7 @@ def make_subsystem(coord, system, dist_check):
 def get_metal_surface_area(fcenter, metal_element, system):
     center = system.lattice.get_cartesian_coords(fcenter)
 
-    vdw_probe = 1.8405  # 1.52 #0.25 #2.1 #1.52 #vdw radius for oxygen
+    vdw_probe = 1.86  # 1.52 #0.25 #2.1 #1.52 #vdw radius for oxygen
     # use 0.0 for vdw_probe to get sphere of metal
     metal_full_surface_area = sphere_area(metal_element, vdw_probe)
     count = 0
@@ -976,14 +1134,14 @@ def get_metal_surface_area(fcenter, metal_element, system):
         # pos=generate_random_position(center,metal_element,vdw_probe) #vdw_probe
         print('xx', pos[0], pos[1], pos[2], file=params_file)
         pos_f = system.lattice.get_fractional_coords(pos)
-        if not check_for_overalp(center, pos_f, system, vdw_probe):
+        if not check_for_overlap(center, pos_f, system, vdw_probe):
             count += 1
     sa_frac = float(count)/float(mc_tries)  # metal_full_surface_area
     sa = metal_full_surface_area*sa_frac
     return sa_frac, sa
 
 
-def check_for_overalp(center, pos, system, r_probe):
+def check_for_overlap(center, pos, system, r_probe):
     # pos=[0.0,0.0,0.0]
     # print  'N 1.0',pos[0],pos[1],pos[2],'biso 1.0 N'
     distances = system.lattice.get_all_distances(pos, system.frac_coords)
