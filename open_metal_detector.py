@@ -242,7 +242,6 @@ def update_output_dict(site_dict, op, pr, t, tf, spec,
 
     return site_dict
 
-
 def unique_site(oms_index, system, cs_list, output_folder, mof_name,molecule_file):
     cs = find_coordination_sequence(oms_index, system)
     oms_id, new_site = find_oms_id(cs_list, cs)
@@ -250,7 +249,6 @@ def unique_site(oms_index, system, cs_list, output_folder, mof_name,molecule_fil
     if new_site:
         print('New site found')
         cs_list.append(cs)
-
         end_to_end = 2.32
         eles = ['O', 'O', 'C']
         ads = add_co2_simple(system, oms_index, end_to_end, eles)
@@ -289,7 +287,6 @@ def unique_site(oms_index, system, cs_list, output_folder, mof_name,molecule_fil
         cif.write_file(output_filename)
 
     return oms_id, cs_list
-
 
 def find_oms_id(cs_list, cs):
     """Check if a given site is unique based on its coordination sequence"""
@@ -839,47 +836,22 @@ def unique_site_simple(oms_index, system, cs_list, output_folder, mof_name, mole
     if new_site:
         print('New site found')
         cs_list.append(cs)
-        ads = add_adsorbate_testing(system, oms_index, molecule_file)
-        #ads = add_adsorbate_simple(system,oms_index,molecule_file)
+        ads = add_adsorbate_simple(system,oms_index,molecule_file)
         mof_with_adsorbate = merge_structures(ads, system)
-        cif = CifWriter(ads)
+        cif = CifWriter(mof_with_adsorbate)
         cif.write_file(mof_filename+'_'+molecule_name+str(oms_id)+'_1.cif')
         cif = CifWriter(mof_with_adsorbate)
         output_filename = mof_filename
         output_filename += '_first_coordination_sphere_with_'+molecule_name
         output_filename += str(oms_id)+'_1.cif'
         cif.write_file(output_filename)
-
     return oms_id, cs_list
 
-def adsorbate_rotation(system, pos, adsorbate_xyz_com_origin,atom_type):
-    coords3 = []
-    inverse_matrix = system.lattice.inv_matrix
-    # building rotation matrix R
-    R = np.zeros((3,3),float)
-    R[:,0] = RandomNumberOnUnitSphere()
-    m = RandomNumberOnUnitSphere()
-    R[:,1] = m - np.dot(m, R[:,0]) * R[:,0] # subtract of component along co1 so it is orthogonal
-    R[:,1] = R[:,1] / np.linalg.norm(R[:,1])
-    R[:,2] = np.cross(R[:,0], R[:,1])
-    R=R.tolist()
-
-    # rotate the molecule
-    new_xyz = np.dot(adsorbate_xyz_com_origin,R) + pos
-
-    # transform the coordinates of molecule to be in the unit cell
-    for j, line in enumerate(new_xyz):
-        s_x = inverse_matrix[0][0] * line[0] + inverse_matrix[0][1] * line[1] + inverse_matrix[0][2] * line[2]
-        s_y = inverse_matrix[1][0] * line[0] + inverse_matrix[1][1] * line[1] + inverse_matrix[1][2] * line[2]
-        s_z = inverse_matrix[2][0] * line[0] + inverse_matrix[2][1] * line[1] + inverse_matrix[2][2] * line[2]
-        coords3.append([float(s_x),float(s_y),float(s_z)])
-
-    return coords3
-
 def adsorbate_placement(system, molecule_file, ads_vector):
-    # read in pre-defined molecule
+    coords, coords2, atom_type, ads_frac, com_frac, diff_com_ads_vector,mol_com_rotated = [], [], [], [], [], [], []
+
+    # Read a pre-defined molecule file
     tmp_molecule = open(molecule_file, 'r').readlines()
-    coords, atom_type, ads_vector_f = [], [], []
     for line in tmp_molecule:
         a = line.split()[0]
         x = line.split()[1]
@@ -888,25 +860,53 @@ def adsorbate_placement(system, molecule_file, ads_vector):
         coords.append([float(x),float(y),float(z)])
         atom_type.append(str(a))
     mol = Molecule(atom_type, coords)
-    # get the center of mass position of the molecule
-    com = mol.center_of_mass # in cartesian coordinate
-    coords2, adsorbate_xyz_com_origin = [], []
 
-    # shift molecule so that the center of mass is at the oms
+    com = mol.center_of_mass # get CoM in cartesian
+    diff_com_ads_vector.append([float(com[0])-float(ads_vector[0][0]),
+                               float(com[1]) - float(ads_vector[0][1]),
+                                float(com[2]) - float(ads_vector[0][2])])
+    # Move the CoM of molecule to the adsorption site (specified angstrom away from the oms)
     for line in tmp_molecule:
-        x = float(line.split()[1]) - float(ads_vector[0][0])
-        y = float(line.split()[2]) - float(ads_vector[0][1])
-        z = float(line.split()[3]) - float(ads_vector[0][2])
+        x = float(line.split()[1]) - float(diff_com_ads_vector[0][0])
+        y = float(line.split()[2]) - float(diff_com_ads_vector[0][1])
+        z = float(line.split()[3]) - float(diff_com_ads_vector[0][2])
         coords2.append([float(x),float(y),float(z)])
 
-    # shift molecule to center the center of mass to the origin
-    for line in tmp_molecule:
-        x = float(line.split()[1]) - float(com[0])
-        y = float(line.split()[2]) - float(com[1])
-        z = float(line.split()[3]) - float(com[2])
-        adsorbate_xyz_com_origin.append([float(x),float(y),float(z)])
+    # RANDOM ROTATION OF MOLECULE AROUND CoM
+    mol_com_origin, rotated_xyz = [], []
+    mol= Molecule(atom_type,coords2)
+    com = mol.center_of_mass
+    for line in coords2:
+        x = float(line[0]) - float(com[0])
+        y = float(line[1]) - float(com[1])
+        z = float(line[2]) - float(com[2])
+        mol_com_origin.append([x,y,z])
+    # building rotation matrix R
+    R = np.zeros((3,3),float)
+    R[:,0] = RandomNumberOnUnitSphere()
+    m = RandomNumberOnUnitSphere()
+    R[:,1] = m - np.dot(m, R[:,0]) * R[:,0] # subtract of component along co1 so it is orthogonal
+    R[:,1] = R[:,1] / np.linalg.norm(R[:,1])
+    R[:,2] = np.cross(R[:,0], R[:,1])
+    R=R.tolist()
+    # rotate the molecule
+    rotated_xyz = np.dot(mol_com_origin,R) + com
 
-    return coords2, atom_type, adsorbate_xyz_com_origin
+    for line in rotated_xyz:
+        x = line[0] + com[0]
+        y = line[1] + com[1]
+        z = line[2] + com[2]
+        mol_com_rotated.append([x,y,z])
+
+    # put adsorbate inside the simulation cell in fractional coordinates
+    inverse_matrix = system.lattice.inv_matrix
+    for j, line in enumerate(mol_com_rotated):
+        s_x = inverse_matrix[0][0] * line[0] + inverse_matrix[0][1] * line[1] + inverse_matrix[0][2] * line[2]
+        s_y = inverse_matrix[1][0] * line[0] + inverse_matrix[1][1] * line[1] + inverse_matrix[1][2] * line[2]
+        s_z = inverse_matrix[2][0] * line[0] + inverse_matrix[2][1] * line[1] + inverse_matrix[2][2] * line[2]
+        ads_frac.append([float(s_x),float(s_y),float(s_z)])
+
+    return ads_frac, atom_type
 
 def adsorbate_framework_overlap(system, com_frac, atom_type):
     for i, dist in enumerate(com_frac):
@@ -917,49 +917,34 @@ def adsorbate_framework_overlap(system, com_frac, atom_type):
     return False
 
 def add_adsorbate_simple(system, oms_index, molecule_file):
-    ads_dist = 2.0
+    ads_dist = 5.0
     ads_vector = []
-    overlap = 0
+    overlap = True
     counter = 0
-    while overlap == 0:
+    print("Initial adsorption site is ", ads_dist, "Å away from OMS.")
+    while overlap is True:
         counter+=1
-        print("step: ", counter)
+        print("insertion attempts: ", counter)
         # find a position *ads_dist* away from oms
         ads_vector.append(find_adsorption_site(system,
                                            system.cart_coords[oms_index],
                                            ads_dist)) # cartesian coordinate as an output
-        com_xyz, atom_type, adsorbate_xyz_com_origin = adsorbate_placement(system,molecule_file, ads_vector)
-        new_frac  = adsorbate_rotation(system, com_xyz, adsorbate_xyz_com_origin,atom_type)
-        # check for the overlap between adsorbate and system
-        overlap = adsorbate_framework_overlap(system, new_frac, atom_type)
-        if overlap:
-            print("overlap ...")
-            overlap = 0
+        ads_frac, atom_type = adsorbate_placement(system,molecule_file, ads_vector)
+        overlap = adsorbate_framework_overlap(system, ads_frac, atom_type)
+        ads = Structure(system.lattice, atom_type, ads_frac)
+        mof_with_adsorbate = merge_structures(ads, system)
+        cif = CifWriter(mof_with_adsorbate)
+        cif.write_file(str(ads_dist) + str(counter) + '.cif')
+        if overlap is True:
+            if counter > 4:
+                ads_dist+=0.5   # increase the distance from adsorption site by 0.5 Å
+                counter = 0     # reset the counter
+                print("New Site is ", ads_dist, "Å away from OMS.")
+            else:
+                continue
         else:
             break
-
-    mol = Structure(system.lattice, atom_type, new_frac)
-    return mol
-
-def add_adsorbate_testing(system, oms_index, molecule_file):
-    ads_dist = 2.0
-    ads_vector = []
-    overlap = 0
-    counter = 0
-    # find a position *ads_dist* away from oms
-    ads_vector.append(find_adsorption_site(system,
-                                           system.cart_coords[oms_index],
-                                           ads_dist)) # cartesian coordinate as an output
-    inverse_matrix = system.lattice.inv_matrix
-    coords3 = []
-    atom_type = ['Xe']
-    for j, line in enumerate(new_xyz):
-        s_x = inverse_matrix[0][0] * line[0] + inverse_matrix[0][1] * line[1] + inverse_matrix[0][2] * line[2]
-        s_y = inverse_matrix[1][0] * line[0] + inverse_matrix[1][1] * line[1] + inverse_matrix[1][2] * line[2]
-        s_z = inverse_matrix[2][0] * line[0] + inverse_matrix[2][1] * line[1] + inverse_matrix[2][2] * line[2]
-        coords3.append([float(s_x),float(s_y),float(s_z)])
-
-    mol = Structure(system.lattice, atom_type, coords3)
+    mol = Structure(system.lattice, atom_type, ads_frac)
     return mol
 
 def RandomNumberOnUnitSphere():
@@ -977,7 +962,7 @@ def find_adsorption_site(system, center, prob_dist):
     # find the adsorption site by maximizing the distance
     # from all the atoms while keep the distance fixed
     # at some predefined distance
-    tries = 10000
+    tries = 1000
     sum_distance = []
     probe_positions = []
     for i in range(0, tries):
