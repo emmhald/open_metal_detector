@@ -848,7 +848,7 @@ def unique_site_simple(oms_index, system, cs_list, output_folder, mof_name, mole
     return oms_id, cs_list
 
 def adsorbate_placement(system, molecule_file, ads_vector):
-    coords, coords2, atom_type, ads_frac, com_frac, diff_com_ads_vector,mol_com_rotated = [], [], [], [], [], [], []
+    coords, coords2, atom_type, ads_frac, com_frac, mol_com_rotated = [], [], [], [], [], []
 
     # Read a pre-defined molecule file
     tmp_molecule = open(molecule_file, 'r').readlines()
@@ -861,20 +861,19 @@ def adsorbate_placement(system, molecule_file, ads_vector):
         atom_type.append(str(a))
     mol = Molecule(atom_type, coords)
 
-    com = mol.center_of_mass # get CoM in cartesian
-    diff_com_ads_vector.append([float(com[0])-float(ads_vector[0][0]),
-                               float(com[1]) - float(ads_vector[0][1]),
-                                float(com[2]) - float(ads_vector[0][2])])
+    com = mol.center_of_mass  # get CoM in cartesian
+    diff_com_ads_vector = [c - a for c, a in zip(com, ads_vector)]
+
     # Move the CoM of molecule to the adsorption site (specified angstrom away from the oms)
     for line in tmp_molecule:
-        x = float(line.split()[1]) - float(diff_com_ads_vector[0][0])
-        y = float(line.split()[2]) - float(diff_com_ads_vector[0][1])
-        z = float(line.split()[3]) - float(diff_com_ads_vector[0][2])
-        coords2.append([float(x),float(y),float(z)])
+        x = float(line.split()[1]) - float(diff_com_ads_vector[0])
+        y = float(line.split()[2]) - float(diff_com_ads_vector[1])
+        z = float(line.split()[3]) - float(diff_com_ads_vector[2])
+        coords2.append([float(x), float(y), float(z)])
 
     # RANDOM ROTATION OF MOLECULE AROUND CoM
     mol_com_origin, rotated_xyz = [], []
-    mol= Molecule(atom_type,coords2)
+    mol = Molecule(atom_type, coords2)
     com = mol.center_of_mass
     for line in coords2:
         x = float(line[0]) - float(com[0])
@@ -926,12 +925,17 @@ def add_adsorbate_simple(system, oms_index, molecule_file):
         counter+=1
         print("insertion attempts: ", counter)
         # find a position *ads_dist* away from oms
-        ads_vector.append(find_adsorption_site(system,
+        ads_vector = find_adsorption_site(system,
                                            system.cart_coords[oms_index],
-                                           ads_dist)) # cartesian coordinate as an output
+                                           ads_dist) # cartesian coordinate as an output
         ads_frac, atom_type = adsorbate_placement(system,molecule_file, ads_vector)
         overlap = adsorbate_framework_overlap(system, ads_frac, atom_type)
         ads = Structure(system.lattice, atom_type, ads_frac)
+
+        # ads_vector_f = [system.lattice.get_fractional_coords(ads_v)
+        #             for ads_v in ads_vector]
+        # ads = Structure(system.lattice, ['F'], ads_vector_f)
+
         mof_with_adsorbate = merge_structures(ads, system)
         cif = CifWriter(mof_with_adsorbate)
         cif.write_file(str(ads_dist) + str(counter) + '.cif')
