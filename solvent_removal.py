@@ -12,6 +12,7 @@ A python code to remove free and coordinated solvents.
 - PyMatgen
 - Atomic Simulation Environment (ASE)
 - SciPy
+- Python 2.7
 
 * Code workflow
 
