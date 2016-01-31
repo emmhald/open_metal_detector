@@ -37,7 +37,7 @@ def main():
                         help='Name of summary file', default='summary.out')
     parser.add_argument('-f', '--folder_in', nargs='?',
                         help='Folder with structure files',
-                        default='CORE-MOF-DB-June2014')
+                        default='./')
     parser.add_argument('-o', '--folder_out', nargs='?',
                         help='Folder with structure files', default='output')
     parser.add_argument('-c', '--continue_run', dest='continue_run',
@@ -861,8 +861,8 @@ def adsorbate_placement(system, molecule_file, ads_vector):
         atom_type.append(str(a))
     mol = Molecule(atom_type, coords)
 
-    com = mol.center_of_mass  # get CoM in cartesian
-    diff_com_ads_vector = [c - a for c, a in zip(com, ads_vector)]
+    com_xyz = mol.center_of_mass  # get CoM in cartesian
+    diff_com_ads_vector = [c - a for c, a in zip(com_xyz, ads_vector)]
 
     # Move the CoM of molecule to the adsorption site (specified angstrom away from the oms)
     for line in tmp_molecule:
@@ -874,11 +874,11 @@ def adsorbate_placement(system, molecule_file, ads_vector):
     # RANDOM ROTATION OF MOLECULE AROUND CoM
     mol_com_origin, rotated_xyz = [], []
     mol = Molecule(atom_type, coords2)
-    com = mol.center_of_mass
+    com_origin = mol.center_of_mass
     for line in coords2:
-        x = float(line[0]) - float(com[0])
-        y = float(line[1]) - float(com[1])
-        z = float(line[2]) - float(com[2])
+        x = float(line[0]) - float(com_origin[0])
+        y = float(line[1]) - float(com_origin[1])
+        z = float(line[2]) - float(com_origin[2])
         mol_com_origin.append([x,y,z])
     # building rotation matrix R
     R = np.zeros((3,3),float)
@@ -889,17 +889,11 @@ def adsorbate_placement(system, molecule_file, ads_vector):
     R[:,2] = np.cross(R[:,0], R[:,1])
     R=R.tolist()
     # rotate the molecule
-    rotated_xyz = np.dot(mol_com_origin,R) + com
-
-    for line in rotated_xyz:
-        x = line[0] + com[0]
-        y = line[1] + com[1]
-        z = line[2] + com[2]
-        mol_com_rotated.append([x,y,z])
+    rotated_xyz = np.dot(mol_com_origin,R) + com_origin
 
     # put adsorbate inside the simulation cell in fractional coordinates
     inverse_matrix = system.lattice.inv_matrix
-    for j, line in enumerate(mol_com_rotated):
+    for j, line in enumerate(rotated_xyz):
         s_x = inverse_matrix[0][0] * line[0] + inverse_matrix[0][1] * line[1] + inverse_matrix[0][2] * line[2]
         s_y = inverse_matrix[1][0] * line[0] + inverse_matrix[1][1] * line[1] + inverse_matrix[1][2] * line[2]
         s_z = inverse_matrix[2][0] * line[0] + inverse_matrix[2][1] * line[1] + inverse_matrix[2][2] * line[2]
@@ -916,7 +910,7 @@ def adsorbate_framework_overlap(system, com_frac, atom_type):
     return False
 
 def add_adsorbate_simple(system, oms_index, molecule_file):
-    ads_dist = 5.0
+    ads_dist = 3.0
     ads_vector = []
     overlap = True
     counter = 0
@@ -928,13 +922,13 @@ def add_adsorbate_simple(system, oms_index, molecule_file):
         ads_vector = find_adsorption_site(system,
                                            system.cart_coords[oms_index],
                                            ads_dist) # cartesian coordinate as an output
-        ads_frac, atom_type = adsorbate_placement(system,molecule_file, ads_vector)
-        overlap = adsorbate_framework_overlap(system, ads_frac, atom_type)
-        ads = Structure(system.lattice, atom_type, ads_frac)
+        # ads_frac, atom_type = adsorbate_placement(system,molecule_file, ads_vector)
+        # overlap = adsorbate_framework_overlap(system, ads_frac, atom_type)
+        # ads = Structure(system.lattice, atom_type, ads_frac)
 
-        # ads_vector_f = [system.lattice.get_fractional_coords(ads_v)
-        #             for ads_v in ads_vector]
-        # ads = Structure(system.lattice, ['F'], ads_vector_f)
+        ads_vector_f = [system.lattice.get_fractional_coords(ads_v)
+                     for ads_v in ads_vector]
+        ads = Structure(system.lattice, ['F'], ads_vector_f)
 
         mof_with_adsorbate = merge_structures(ads, system)
         cif = CifWriter(mof_with_adsorbate)
