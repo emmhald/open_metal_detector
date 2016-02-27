@@ -919,7 +919,7 @@ def add_adsorbate_simple(system, oms_index, molecule_file):
         ads_vector = find_adsorption_site(system,
                                            system.cart_coords[oms_index],
                                            ads_dist) # cartesian coordinate as an output
-        ads_frac, atom_type = adsorbate_placement_new(system, molecule_file,
+        ads_frac, atom_type = adsorbate_placement(system, molecule_file,
                                                       ads_vector)
         overlap = adsorbate_framework_overlap(system, ads_frac, atom_type)
         ads = Structure(system.lattice, atom_type, ads_frac)
