@@ -185,6 +185,7 @@ def collect_statistics(json_dicts, analysis_folder):
         metal_sites = json_dict['metal_sites']
         metals_open = set()
         metals = set()
+        oms_set = set()
         number_of_linkers = set()
         for ms in metal_sites:
             metal = ms['metal']
@@ -194,23 +195,33 @@ def collect_statistics(json_dicts, analysis_folder):
                 stats[metal]['count_open_sites'] += 1
                 metals_open.add(metal)
                 number_of_linkers.add(num_of_linkers)
+                oms_set.add((metal, num_of_linkers))
         # stats[metal]['count'] = len(metals)
         # stats[metal]['count_open'] = len(metals_open)
         for m in metals:
             stats[m]['count'] += 1
-        for m in metals_open:
-            stats[m]['count_open'] += 1
-        for l in number_of_linkers:
-            if l == 0:
-                print(struc)
+        for om in oms_set:
+            met, l = om
             if l > 6:
                 tfac = 'tover'
             else:
                 tfac = 't'+str(l)
-            stats[metal][tfac] += 1
+            # stats[met]['count_open'] += 1
+            stats[met][tfac] += 1
+        for m in metals_open:
+            stats[m]['count_open'] += 1
+        #for l in number_of_linkers:
+        #    # if l == 0:
+        #    #     print(struc)
+        #    if l > 6:
+        #        tfac = 'tover'
+        #    else:
+        #        tfac = 't'+str(l)
+        #    stats[metal][tfac] += 1
 
         if len(number_of_linkers) > 0:
-            if min(number_of_linkers) == 0:
+            # if 6 in list(number_of_linkers) and 'Zr' in metals_open:
+            if 5 in list(number_of_linkers) and len(metals_open) != len(metals):
                 dest = analysis_folder+'/L_'+str(min(number_of_linkers))+'/'
                 copy_folder(dest, json_dict['source_name'])
 
@@ -231,6 +242,8 @@ def collect_statistics(json_dicts, analysis_folder):
 
         if ap.is_group1(metal):
             continue
+        if not ap.is_d4_or_less(metal):
+            continue
         percent = 100*float(s['count_open'])/float(s['count'])
         percent_s = "{0:.2f} %".format(percent)
         printout = [metal,
@@ -246,23 +259,6 @@ def collect_statistics(json_dicts, analysis_folder):
                     s['t5'],
                     s['t6'],
                     s['tover']]
-        # printout.append(s['count'])
-        # printout.append(s['count_open'])
-        # printout.append(s['count_open_sites'])
-        # percent = 100*float(s['count_open'])/float(s['count'])
-        # percent_s = "{0:.2f} %".format(percent)
-        # printout.append(percent_s)
-        # printout.append(1.1)
-        # printout.append(s['t0'])
-        # printout.append(s['t1'])
-        # printout.append(s['t2'])
-        # printout.append(s['t3'])
-        # printout.append(s['t3'])
-        # printout.append(s['t4'])
-        # printout.append(s['t5'])
-        # printout.append(s['t6'])
-        # printout.append(s['tover'])
-        # string.center(s, wid)
         printouts.append(printout)
 
     print("Total MOFs:     ", len(json_dicts))
@@ -270,7 +266,7 @@ def collect_statistics(json_dicts, analysis_folder):
         return
     print("Open Metal MOFs: {0:} {1:.2f} %"
           .format(int(count_open), 100.0 * count_open/len(json_dicts)))
-    titles = ['Metal', 'All Found', 'Open-Metal', 'Open-Metal-Site',
+    titles = ['Metal', 'All-Found', 'Open-Metal', 'Open-Metal-Site',
               'Per.-Open', 'l0', 'l1', 'l2', 'l3', 'l4', 'l5', 'l6',
               'l-over-6']
     # print "{0:6}{1:12}{2:18}{3:6}{4:6}{5:6}".format(*titles)
@@ -399,15 +395,16 @@ def analyse_results_sa():
 
 def analyse_results(json_dicts, element, analysis_folder, output_folder):
 
-    folder = 'analysis/selected_mofs/'+element
-    cif_folder_out = 'analysis/selected_mofs/'+element+'/cif_files'
-    if not os.path.exists(folder):
-        os.makedirs(folder)
-    if not os.path.exists(cif_folder_out):
-        os.makedirs(cif_folder_out)
-    summary_ele = open(folder+'/summary.out', 'w')
+    folder = analysis_folder+'/selected_mofs/'+element
+    vaspfolder = analysis_folder+'/calcs/'
+    cif_folder_out = analysis_folder+'/selected_mofs/'+element+'/cif_files'
+    make_folder(folder)
+    make_folder(vaspfolder)
+    make_folder(cif_folder_out)
+
+    open(folder+'/summary.out', 'w').close()
     cif_folder = output_folder+'/open_metal_mofs/'
-    summary = open('summary.out', 'a')
+    open('summary.out', 'w').close()
 
     print('MOF', '#OMS', '#OMS_types', 'OMS ids', '#OMS_per_type')
     count = 0
@@ -424,7 +421,7 @@ def analyse_results(json_dicts, element, analysis_folder, output_folder):
                 struc_contains_open_metal = True
             if 'oms_id' in ms:
                 oms_ids.append(ms['oms_id'])
-        if contains_metal_but_closed:
+        if contains_metal_but_closed and not struc_contains_open_metal:
             print(json_dict['material_name'], 'closed')
         if struc_contains_open_metal:
             count += 1
@@ -433,69 +430,142 @@ def analyse_results(json_dicts, element, analysis_folder, output_folder):
             ads_folder = output_folder+'/'+struc
             copy_folder(folder+'/', ads_folder)
             # copy_folder(folder+'/'+struc , ads_folder)
-            if not os.path.exists(folder+'/'+struc):
-                os.makedirs(folder+'/'+struc)
-            if 1 == 1:
+            make_folder(folder+'/'+struc)
 
-                cif_name = struc+'.cif'
-                print(cif_name, '-', len(oms_ids), '-', len(set(oms_ids)),
-                      '-', oms_ids, '-',
-                      *[oms_ids.count(i) for i in set(oms_ids)])
+            cif_name = struc+'.cif'
+            with open(folder+'/summary.out', 'a') as summary_ele:
                 print(struc+'.cif', file=summary_ele)
-                cif = CifParser(cif_folder+cif_name)
-                system = cif.get_structures()[0]
-                struc_xyz_ = folder + '/' + struc + '/' + struc + '.xyz'
-                system.to(fmt='xyz', filename=struc_xyz_)
-                name = folder + '/' + struc + '/' + cif_name
-                shutil.copyfile(cif_folder+cif_name, name)
-                out_cif_name = cif_folder_out + '/' + cif_name
-                shutil.copyfile(cif_folder+cif_name, out_cif_name)
-                dynamics = []
-                for atom in range(0, system.num_sites):
-                    dynamics.append([False, False, False])
-                pos = vasp.Poscar(system, selective_dynamics=dynamics)
-                pos.write_file(folder+'/'+struc+'/POSCAR_'+struc)
-                # print(folder+'/'+struc+'/POSCAR_'+struc)
-                # ads_folder='../detect_open_metal_sites/July_2014_runs/output/'+struc
+            cif = CifParser(cif_folder+cif_name)
+            system = cif.get_structures()[0]
+            struc_xyz_ = folder + '/' + struc + '/' + struc + '.xyz'
+            system.to(fmt='xyz', filename=struc_xyz_)
 
-            if 1 == 1:
-                for ads_type in ['co2', 'n2']:
-                    om_count = -1
-                    while True:
-                        om_count += 1
-                        with__ = struc+'_first_coordination_sphere_with_'
-                        ads_file = with__+ads_type+'_'+str(om_count)+'.cif'
-                        ads_path = ads_folder+'/'+ads_file
-                        if not os.path.isfile(ads_path):
-                            break
-                        cif = CifParser(ads_path)
-                        try:
-                            system_ads = cif.get_structures()[0]
-                        except:
-                            print('Cannot read ads cif file')
-                            continue
-                        file = folder + '/' + struc + '/' + ads_file
-                        shutil.copyfile(ads_path, file)
-                        dynamics = []
-                        for atom in range(0, system_ads.num_sites):
-                            dynamics.append([True, True, True])
-                        i = -1
-                        for e, c in zip(system_ads.species,
-                                        system_ads.frac_coords):
-                            i += 1
-                            for es, cs in zip(system.species,
-                                              system.frac_coords):
-                                dist = system.lattice.get_all_distances(c, cs)
-                                if es == e and dist < 0.5:
-                                    dynamics[i] = ([False, False, False])
-                        pos = vasp.Poscar(system_ads,
-                                          selective_dynamics=dynamics)
-                        pos.write_file(folder+'/'+struc+'/POSCAR_'+ads_file)
+            name = folder + '/' + struc + '/' + cif_name
+            shutil.copyfile(cif_folder+cif_name, name)
+            out_cif_name = cif_folder_out + '/' + cif_name
+            shutil.copyfile(cif_folder+cif_name, out_cif_name)
 
+            dynamics = []
+            for atom in range(0, system.num_sites):
+                dynamics.append([False, False, False])
+            pos = vasp.Poscar(system, selective_dynamics=dynamics)
+            pos.write_file(folder+'/'+struc+'/POSCAR_'+struc)
+
+            make_folder(vaspfolder+'/'+struc)
+            make_folder(vaspfolder+'/'+struc+'/framework')
+            pos.write_file(vaspfolder+'/'+struc+'/framework/POSCAR')
+
+            potcar_file = vaspfolder+'/'+struc+'/framework/POTCAR'
+            make_potcar(pos, potcar_file)
+            copy_vasp_files('vasp_input_files',
+                            vaspfolder+'/'+struc+'/framework',
+                            'INCAR_opt', struc)
+            # replace_in_file('name', struc, 'vasp_input_files/pbs.multi')
+
+
+            ads_folder = output_folder+'/'+struc
+            om_count = dict()
+            adss = ['co2', 'n2']
+            for ads_type in adss:
+                om_count[ads_type] = -1
+                while True:
+                    with__ = struc+'_first_coordination_sphere_with_'+ads_type
+                    ads_file = with__+'_'+str(om_count[ads_type]+1)+'.cif'
+                    ads_path = ads_folder+'/'+ads_file
+                    if not os.path.isfile(ads_path):
+                        break
+                    om_count[ads_type] += 1
+                    cif = CifParser(ads_path)
+                    try:
+                        system_ads = cif.get_structures()[0]
+                    except:
+                        print('Cannot read ads cif file')
+                        continue
+                    file = folder + '/' + struc + '/' + ads_file
+                    shutil.copyfile(ads_path, file)
+                    dynamics = []
+                    for atom in range(0, system_ads.num_sites):
+                        dynamics.append([True, True, True])
+                    i = -1
+                    for e, c in zip(system_ads.species,
+                                    system_ads.frac_coords):
+                        i += 1
+                        for es, cs in zip(system.species,
+                                          system.frac_coords):
+                            dist = system.lattice.get_all_distances(c, cs)
+                            if es == e and dist < 0.5:
+                                dynamics[i] = ([False, False, False])
+                    pos = vasp.Poscar(system_ads, selective_dynamics=dynamics)
+                    pos.write_file(folder+'/'+struc+'/POSCAR_'+ads_file)
+
+                    site_folder = vaspfolder + '/' + struc + '/site_'
+                    site_folder = site_folder + str(om_count[ads_type])
+
+                    ads_vaspfolder = site_folder+'/'+ads_type
+                    adsframe_vaspfolder = site_folder+'/framework_'+ads_type
+                    make_folder(site_folder)
+                    make_folder(ads_vaspfolder)
+                    make_folder(adsframe_vaspfolder)
+
+                    ads_potcar = 'vasp_input_files/potcar_files/POTCAR_'+\
+                                 ads_type
+                    shutil.copyfile(ads_potcar, ads_vaspfolder+'/POTCAR')
+
+                    pos.write_file(adsframe_vaspfolder+'/POSCAR')
+                    potcar_file = adsframe_vaspfolder+'/POTCAR'
+                    make_potcar(pos, potcar_file)
+
+                    copy_vasp_files('vasp_input_files',
+                                    adsframe_vaspfolder, 'INCAR_opt',
+                                    struc+'_framework_'+ads_type)
+                    copy_vasp_files('vasp_input_files',
+                                    ads_vaspfolder, 'INCAR_fixed',
+                                    struc+'_'+ads_type)
+
+            print(cif_name, '-', len(oms_ids), '-', len(set(oms_ids)),
+                  '-', oms_ids, '-', [oms_ids.count(i) for i in set(oms_ids)])
+            #print(om_count[adss[0]], om_count[adss[1]])
     print(count, ' MOFs with ', element, ' open metal sites were found')
-    print(count, ' MOFs with ', element, ' open metal sites were found',
-          file=summary)
+    with open('summary.out', 'w') as summary:
+        print(count, ' MOFs with ', element, ' open metal sites were found',
+              file=summary)
 
+def replace_in_file(str_match, str_replace, filename):
+    lines = []
+    with open(filename, 'r') as file_:
+        for l in file_:
+            new_l = re.sub(str_match, str_replace, l.rstrip())
+            lines.append(new_l)
+            # print(l.rstrip())
+            # print(new_l)
+            # input()
+    with open(filename, 'w') as file_:
+        for l in lines:
+            print(l, file=file_)
+
+def copy_vasp_files(vaspfiles, targetfolder, incarfile, struc):
+    shutil.copyfile(vaspfiles+'/KPOINTS', targetfolder+'/KPOINTS')
+    shutil.copyfile(vaspfiles+'/'+incarfile, targetfolder+'/INCAR')
+    shutil.copyfile(vaspfiles+'/INCAR_fixed', targetfolder+'/INCAR')
+    shutil.copyfile(vaspfiles+'/run_vasp', targetfolder+'/run_vasp')
+    shutil.copyfile(vaspfiles+'/pbs.job_itasca', targetfolder+'/pbs.job_itasca')
+    replace_in_file('name', struc, targetfolder+'/pbs.job_itasca')
+    shutil.copyfile(vaspfiles+'/pbs.job_mesabi', targetfolder+'/pbs.job_mesabi')
+    replace_in_file('name', struc, targetfolder+'/pbs.job_mesabi')
+
+def make_potcar(pos, potcar_file):
+    elements = []
+    for s in pos.as_dict()['structure']['sites']:
+        ele = s['species'][0]['element']
+        if ele not in elements:
+            elements.append(ele)
+
+    with open(potcar_file, 'w') as outfile:
+        for ele in elements:
+            potcar_ele = 'vasp_input_files/potcar_files/POTCAR_'+ele
+            with open(potcar_ele) as infile:
+                for line in infile:
+                    outfile.write(line)
 
 def make_folder(folder):
     if not os.path.exists(folder):
