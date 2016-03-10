@@ -187,9 +187,10 @@ def analyze_structure(filename, uc_params, sfile, cont, source_folder,
                 oms_index = match_index(str(open_metal_candidate.species[0]),
                                         open_metal_candidate.frac_coords[0],
                                         system)
-                site_dict["oms_id"], cs_list = \
-                    unique_site(oms_index, system, cs_list,
-                                output_folder, mof_name)
+                site_dict["oms_id"], cs_list = unique_site(oms_index, system,
+                                                           cs_list,
+                                                           output_folder,
+                                                           mof_name)
             if not output_json['metal_sites_found']:
                 output_json['metal_sites_found'] = True
             if pr:
@@ -277,11 +278,11 @@ def unique_site(oms_index, system, cs_list, output_folder, mof_name):
         mof_with_co2 = merge_structures(ads, system)
         cif = CifWriter(ads)
         cif.write_file(mof_filename+'_co2_'+str(oms_id)+'.cif')
-        cif = CifWriter(mof_with_co2)
 
+        cif = CifWriter(mof_with_co2)
         output_filename = mof_filename
         output_filename += '_first_coordination_sphere_with_co2_'
-        output_filename = str(oms_id)+'.cif'
+        output_filename += str(oms_id)+'.cif'
         cif.write_file(output_filename)
 
         end_to_end = 1.1
@@ -292,8 +293,8 @@ def unique_site(oms_index, system, cs_list, output_folder, mof_name):
         cif.write_file(mof_filename+'_n2_'+str(oms_id)+'.cif')
         cif = CifWriter(mof_with_co2)
         output_filename = mof_filename
-        output_filename += 'first_coordination_sphere_with_n2'
-        output_filename = str(oms_id)+'.cif'
+        output_filename += '_first_coordination_sphere_with_n2_'
+        output_filename += str(oms_id)+'.cif'
         cif.write_file(output_filename)
     return oms_id, cs_list
 
@@ -373,6 +374,7 @@ def find_coord_sphere(center, structure):
         tol = ap.get_bond_tolerance(species_one, species_two)
         bond_tol = tol
         if ap.bond_check(species_one, species_two, dis, bond_tol):
+            coord_sphere.append(i)
             try:
                 ligands_structure_new.append(str(structure.species[i]),
                                              structure.frac_coords[i])
