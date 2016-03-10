@@ -7,29 +7,24 @@ Created on %(date)s
 from __future__ import print_function
 import sys
 import os
-# sys.path.append('~/Dropbox/Work/python/modules')
-path = os.path.expanduser('~/Dropbox/Work/python/modules')
-# path = os.path.expanduser('~/dropbox/Work/python/modules')
-if path not in sys.path:
-    sys.path.insert(1, path)
-del path
-from xyz_read import xyz_file
 from pymatgen import Lattice, Structure
-from pymatgen.io.cifio import CifParser
-from pymatgen.io.cifio import CifWriter
+from pymatgen.io.cif import CifParser
+from pymatgen.io.cif import CifWriter
+from pymatgen import Molecule
+from pymatgen.io.xyz import XYZ
+import pymatgen.io.xyz as xyzio
 import numpy as np
 import shlex
 import shutil
 import time
 import math
 import random
-import pymatgen.io.smartio as sio
 from atomic_parameters import atoms as ap
 import json
 import argparse
-import pymatgen.io.xyzio as xyzio
 import itertools
-import yappi
+
+PI = np.pi
 
 
 def main():
@@ -42,16 +37,18 @@ def main():
                         help='Name of summary file', default='summary.out')
     parser.add_argument('-f', '--folder_in', nargs='?',
                         help='Folder with structure files',
-                        default='CORE-MOF-DB-June2014')
+                        default='./')
     parser.add_argument('-o', '--folder_out', nargs='?',
                         help='Folder with structure files', default='output')
-    parser.add_argument('--continue_run', dest='continue_run',
+    parser.add_argument('-c', '--continue_run', dest='continue_run',
                         action='store_true')
     parser.add_argument('--attach_sorbate', dest='attach_sorbate',
                         action='store_true')
     parser.add_argument('-m', '--max_structures', nargs='?', default=10000000,
                         const=10000000, type=int,
                         help='The maximum number of structures to run')
+    parser.add_argument('-mf', '--molecule_file', nargs='?',
+                        help='xyz coordinates of molecule',default='ethane.txt')
     parser.set_defaults(continue_run=False)
     parser.set_defaults(attach_sorbate=False)
 
@@ -63,45 +60,40 @@ def main():
     target_folder = args.folder_out+'/'
     number_of_structures = args.max_structures
     sfile = args.summary_file
+    molecule_file = args.molecule_file
 
     tolerance = dict()
-    tolerance['plane'] = 25 # 30 # 35
-    tolerance['plane_5l'] = 25 # 30
+    tolerance['plane'] = 25  # 30 # 35
+    tolerance['plane_5l'] = 25  # 30
     tolerance['tetrahedron'] = 10
     tolerance['plane_on_metal'] = 12.5
 
     t0 = time.time()
     with open(params_filename, 'r') as params_file:
         if not cont:
-            clear_files(sfile, cont, target_folder)
+            clear_files(sfile, target_folder)
         for i, struc in enumerate(params_file):
             t0s = time.time()
-            uc_params = []
+
             line_elements = shlex.split(struc)
             filename = line_elements[0]
-            if filename.split('.')[0] == 'xyz':
-                for j in range(1, 7):
-                    uc_params.append(float(line_elements[j]))
-            analyze_structure(filename, uc_params, sfile, cont, source_folder,
-                              target_folder, attach_ads, tolerance)
+            analyze_structure(filename, sfile, cont, source_folder,
+                              target_folder, attach_ads, molecule_file,tolerance)
+
             t1s = time.time()
             print('Time:', t1s-t0s)
             if i+1 >= number_of_structures:
                 break
         params_file.close()
         t1 = time.time()
-        print('Total Time', t1-t0)
+        print('\n Total Time', t1-t0)
 
 
-def clear_files(sfile, cont, target_folder):
-    make_folder('output')
-    file_type = 'w'
-    open_metal_mofs = open('output/open_metal_mofs.out', file_type)
-    problematic_mofs = open('output/problematic.gcd', file_type)
-    summary_mofs = open('output/'+sfile, file_type)
-    open_metal_mofs.close()
-    problematic_mofs.close()
-    summary_mofs.close()
+def clear_files(sfile, target_folder):
+    make_folder(target_folder)
+    open(target_folder+'open_metal_mofs.out', 'w').close()
+    open(target_folder+'problematic.gcd', 'w').close()
+    open(target_folder+sfile, 'w').close()
 
 
 def make_folder(folder):
@@ -119,14 +111,16 @@ def delete_folder(folder_path):
                 shutil.rmtree(file_object_path)
 
 
-def analyze_structure(filename, uc_params, sfile, cont, source_folder,
-                      target_folder, attach_ads, tolerance):
+def analyze_structure(filename, sfile, cont, source_folder,
+                      target_folder, attach_ads,molecule_file, tolerance):
 
-    mof_name = filename.split('.')[0]
+    filetype = filename.split('.')[-1]
+    mof_name = filename.split('.'+filetype)[0]
+    molecule_filetype = molecule_file.split('.')[-1]
     output_folder = target_folder+mof_name
     json_file_out = output_folder+'/'+mof_name+'.json'
     if cont and os.path.exists(json_file_out):
-        print(mof_name, 'has run already... skipping')
+        print(mof_name, 'has been processed already... skipping')
         return
     delete_folder(output_folder)
     make_folder(output_folder)
@@ -136,17 +130,8 @@ def analyze_structure(filename, uc_params, sfile, cont, source_folder,
     open_metal_mofs = open(target_folder+'open_metal_mofs.out', 'a')
     problematic_mofs = open(target_folder+'problematic.out', 'a')
     summary_mofs = open(target_folder+sfile, 'a')
-    filetype = filename.split('.')[-1]
-    if filetype == 'xyz':
-        xyz = xyz_file()
-        xyz.filename_in = source_folder+filename
-        if not os.path.isfile(xyz.filename_in):
-            print('File not found', xyz.filename_in)
-            return
-        xyz.load_parameters(uc_params)
-        xyz.open()
-        lattice, system = make_system_from_xyz(xyz)
-    elif filetype == 'cif':
+
+    if filetype == 'cif':
         lattice, system = make_system_from_cif(source_folder+filename)
     else:
         sys.exit('Do not know this filetype')
@@ -155,7 +140,7 @@ def analyze_structure(filename, uc_params, sfile, cont, source_folder,
 
     metal, organic = split_structure_to_organic_and_metal(system)
     if metal.num_sites == 0:
-        print(mof_name+' not metal was found in structure', end="",
+        print(mof_name+' : No metal was found in structure', end="",
               file=summary_mofs)
         summary_mofs.close()
         return
@@ -163,14 +148,10 @@ def analyze_structure(filename, uc_params, sfile, cont, source_folder,
     m_sa_frac, m_surface_area = 0.0, 0.0
     # m_sa_frac,m_surface_areaget_metal_surface_areas(metal,system)
 
-    # yappi.start()
-
-    # first_coordination_structure, first_coordnation_structure_each_metal =
-    # find_first_coordination_sphere(metal, system)
-    first_coordnation_structure_each_metal = \
-        find_all_coord_spheres(metal, system)
-    output_json = \
-        get_output_dict(mof_name, m_surface_area, m_sa_frac, system.volume)
+    first_coordnation_structure_each_metal = find_all_coord_spheres(metal,
+                                                                    system)
+    output_json = get_output_dict(mof_name, m_surface_area, m_sa_frac,
+                                  system.volume)
 
     cs_list = []  # list of coordination sequences for each open metal found
     for m, open_metal_candidate \
@@ -187,10 +168,9 @@ def analyze_structure(filename, uc_params, sfile, cont, source_folder,
                 oms_index = match_index(str(open_metal_candidate.species[0]),
                                         open_metal_candidate.frac_coords[0],
                                         system)
-                site_dict["oms_id"], cs_list = unique_site(oms_index, system,
-                                                           cs_list,
-                                                           output_folder,
-                                                           mof_name)
+                site_dict["oms_id"], cs_list = \
+                    unique_site_simple(oms_index, system, cs_list,
+                                output_folder, mof_name,molecule_file) # general way to add adsorbate (still debugging)
             if not output_json['metal_sites_found']:
                 output_json['metal_sites_found'] = True
             if pr:
@@ -201,7 +181,6 @@ def analyze_structure(filename, uc_params, sfile, cont, source_folder,
         output_json['metal_sites'].append(site_dict)
 
     print('Checking for OMSs done. Writing files')
-    # yappi.get_func_stats().print_all()
 
     summary = write_summary(output_json)
     # if open_metal_site:
@@ -263,15 +242,13 @@ def update_output_dict(site_dict, op, pr, t, tf, spec,
 
     return site_dict
 
-
-def unique_site(oms_index, system, cs_list, output_folder, mof_name):
+def unique_site(oms_index, system, cs_list, output_folder, mof_name,molecule_file):
     cs = find_coordination_sequence(oms_index, system)
     oms_id, new_site = find_oms_id(cs_list, cs)
     mof_filename = output_folder+'/'+mof_name
     if new_site:
         print('New site found')
         cs_list.append(cs)
-
         end_to_end = 2.32
         eles = ['O', 'O', 'C']
         ads = add_co2_simple(system, oms_index, end_to_end, eles)
@@ -293,11 +270,23 @@ def unique_site(oms_index, system, cs_list, output_folder, mof_name):
         cif.write_file(mof_filename+'_n2_'+str(oms_id)+'.cif')
         cif = CifWriter(mof_with_co2)
         output_filename = mof_filename
-        output_filename += '_first_coordination_sphere_with_n2_'
+        output_filename += 'first_coordination_sphere_with_n2'
         output_filename += str(oms_id)+'.cif'
         cif.write_file(output_filename)
-    return oms_id, cs_list
 
+        end_to_end = 1.54
+        eles = ['C','C']
+        ads = add_co2_simple(system,oms_index,end_to_end,eles)
+        mof_with_ethane = merge_structures(ads,system)
+        cif = CifWriter(ads)
+        cif.write_file(mof_filename+'_ethane_'+str(oms_id)+'.cif')
+        cif = CifWriter(mof_with_ethane)
+        output_filename = mof_filename
+        output_filename += 'first_coordination_sphere_with_ethane'
+        output_filename += str(oms_id)+'.cif'
+        cif.write_file(output_filename)
+
+    return oms_id, cs_list
 
 def find_oms_id(cs_list, cs):
     """Check if a given site is unique based on its coordination sequence"""
@@ -340,7 +329,9 @@ def write_summary(output_json):
 
 
 def write_xyz_file(filename, system):
-    xyzio.XYZ(system).write_file(filename+'.xyz')
+    if not filename[-4:] == '.xyz':
+        filename += '.xyz'
+    xyzio.XYZ(system).write_file(filename)
 
 
 def find_all_coord_spheres(centers, structure):
@@ -460,7 +451,6 @@ def find_first_coordination_sphere(metal, structure_full):
 def make_system_from_cif(ciffile):
     cif = CifParser(ciffile)
     system = cif.get_structures(primitive=False)
-    print(ciffile)
     return system[0].lattice, system[0]
 
 
@@ -712,6 +702,7 @@ def obtain_metal_dihedrals(num, system):
 
     return all_dihedrals, indeces
 
+
 def obtain_dihedrals_old(num, system):
     all_dihedrals = []
     indeces = []
@@ -719,7 +710,6 @@ def obtain_dihedrals_old(num, system):
         for j in range(1, num):
             for k in range(1, num):
                 for l in range(1, num):
-                    # print(i,j,k,l)
                     if i == j or i == k or i == l or j == k or j == l or k == l:
                         pass
                     else:
@@ -727,8 +717,6 @@ def obtain_dihedrals_old(num, system):
                         all_dihedrals.append(dihedral)
                         indeces.append([i, j, k, l])
     all_dihedrals = [round(x, 5) for x in all_dihedrals]
-    # print(set(all_dihedrals))
-    # print('------')
     all_dihedrals_new = []
     indices_1 = range(1, num)
     indices_2 = range(1, num)
@@ -743,9 +731,8 @@ def obtain_dihedrals_old(num, system):
         if ang not in all_dihedrals_new:
             print('ERROR')
             input()
-    # print(set(all_dihedrals_new))
-    # input()
     return all_dihedrals, indeces
+
 
 def obtain_metal_dihedrals_old(num, system):
     all_dihedrals = []
@@ -776,7 +763,6 @@ def obtain_metal_dihedrals_old(num, system):
             input()
     return all_dihedrals, indeces
 
-
 def add_co2(v1, v2, v3, v4, system):
     ads_dist = 2.2
     # old method for adding co2.
@@ -805,7 +791,6 @@ def add_co2(v1, v2, v3, v4, system):
                         in zip(p1, p2)]+system.cart_coords[0]
         co2_vector_C_f = system.lattice.get_fractional_coords(co2_vector_c)
         co2_vector_O_f = system.lattice.get_fractional_coords(co2_vector_o)
-
 
 def add_co2_simple(structure, oms_index, end_to_end, eles):
 
@@ -844,11 +829,134 @@ def add_co2_simple(structure, oms_index, end_to_end, eles):
     print('Min adsorbate distance from framework:', min(dists), max(dists))
     return Structure(structure.lattice, adsorption_site, adsorption_pos)
 
+def unique_site_simple(oms_index, system, cs_list, output_folder, mof_name, molecule_file):
+    cs = find_coordination_sequence(oms_index, system)
+    oms_id, new_site = find_oms_id(cs_list, cs)
+    mof_filename = output_folder+'/'+mof_name
+    molecule_name = molecule_file.split('.'+'prm')[0]
+    if new_site:
+        print('New site found')
+        cs_list.append(cs)
+        ads = add_adsorbate_simple(system,oms_index,molecule_file)
+        mof_with_adsorbate = merge_structures(ads, system)
+        cif = CifWriter(mof_with_adsorbate)
+        cif.write_file(mof_filename+'_'+molecule_name+str(oms_id)+'_1.cif')
+        cif = CifWriter(mof_with_adsorbate)
+        output_filename = mof_filename
+        output_filename += '_first_coordination_sphere_with_'+molecule_name
+        output_filename += str(oms_id)+'_1.cif'
+        cif.write_file(output_filename)
+    return oms_id, cs_list
+
+
+def adsorbate_placement(system, molecule_file, ads_vector):
+    coords, coords2, atom_type, ads_frac, com_frac, mol_com_rotated = [], [], [], [], [], []
+
+    # Read a pre-defined molecule file
+    mol = Molecule.from_file(molecule_file)
+
+    com_xyz = mol.center_of_mass  # get CoM in cartesian
+    diff_com_ads_vector = np.array([c - a for c, a in zip(com_xyz, ads_vector)])
+    # shift com of molecule to the position of ads_vector
+    mol.translate_sites([i for i in range(0, len(mol))], -diff_com_ads_vector)
+
+    # RANDOM ROTATION OF MOLECULE AROUND CoM
+    mol_com_origin, rotated_xyz = [], []
+    # mol = Molecule(atom_type, coords2)
+    com_origin = mol.center_of_mass
+    mol.translate_sites([i for i in range(0, len(mol))], -com_origin)
+
+    # for line in coords2:
+    #     x = float(line[0]) - float(com_origin[0])
+    #     y = float(line[1]) - float(com_origin[1])
+    #     z = float(line[2]) - float(com_origin[2])
+    #     mol_com_origin.append([x, y, z])
+    # building rotation matrix R
+    R = np.zeros((3, 3), float)
+    R[:, 0] = RandomNumberOnUnitSphere()
+    m = RandomNumberOnUnitSphere()
+    R[:, 1] = m - np.dot(m, R[:, 0]) * R[:, 0] # subtract of component along co1 so it is orthogonal
+    R[:, 1] = R[:, 1] / np.linalg.norm(R[:, 1])
+    R[:, 2] = np.cross(R[:, 0], R[:, 1])
+    R = R.tolist()
+    # rotate the molecule
+    rotated_xyz = np.dot(mol.cart_coords, R) + com_origin
+
+    rotated_moledule = Structure(system.lattice, mol.species, rotated_xyz,
+                                 coords_are_cartesian=True)
+
+    # put adsorbate inside the simulation cell in fractional coordinates
+    inverse_matrix = system.lattice.inv_matrix
+    for j, line in enumerate(rotated_xyz):
+        s_x = inverse_matrix[0][0] * line[0] + inverse_matrix[0][1] * line[1] + inverse_matrix[0][2] * line[2]
+        s_y = inverse_matrix[1][0] * line[0] + inverse_matrix[1][1] * line[1] + inverse_matrix[1][2] * line[2]
+        s_z = inverse_matrix[2][0] * line[0] + inverse_matrix[2][1] * line[1] + inverse_matrix[2][2] * line[2]
+        ads_frac.append([float(s_x), float(s_y), float(s_z)])
+
+    atom_type = [str(e) for e in rotated_moledule.species]
+    return rotated_moledule.frac_coords, atom_type
+
+
+def adsorbate_framework_overlap(system, com_frac, atom_type):
+    for i, dist in enumerate(com_frac):
+        distances = system.lattice.get_all_distances(com_frac[i],
+                                                     system.frac_coords)
+        for j, dist2 in enumerate(distances[0]):
+            if (dist2 - (ap.get_vdf_radius(str(atom_type[i])) + ap.get_vdf_radius(str(system.species[j])))) < -1e-4:
+                return True
+    return False
+
+
+def add_adsorbate_simple(system, oms_index, molecule_file):
+    ads_dist = 3.0
+    ads_vector = []
+    overlap = True
+    counter = 0
+    print("Initial adsorption site is ", ads_dist, "Å away from OMS.")
+    while overlap is True:
+        counter += 1
+        print("insertion attempts: ", counter)
+        # find a position *ads_dist* away from oms
+        ads_vector = find_adsorption_site(system,
+                                           system.cart_coords[oms_index],
+                                           ads_dist) # cartesian coordinate as an output
+        ads_frac, atom_type = adsorbate_placement(system, molecule_file,
+                                                      ads_vector)
+        overlap = adsorbate_framework_overlap(system, ads_frac, atom_type)
+        ads = Structure(system.lattice, atom_type, ads_frac)
+
+        mof_with_adsorbate = merge_structures(ads, system)
+        cif = CifWriter(mof_with_adsorbate)
+        cif.write_file(str(ads_dist) + str(counter) + '.cif')
+        if overlap is True:
+            if counter > 4:
+                ads_dist += 0.5   # increase the distance from adsorption site by 0.5 Å
+                counter = 0     # reset the counter
+                print("New Site is ", ads_dist, "Å away from OMS.")
+            else:
+                continue
+        else:
+            break
+    mol = Structure(system.lattice, atom_type, ads_frac)
+    return mol
+
+
+def RandomNumberOnUnitSphere():
+    thetha = 0.0
+    phi = 0.0
+    theta = 2*PI*np.random.random_sample()
+    phi = np.arccos(2*np.random.random_sample()-1.0)
+    x = np.cos(theta)*np.sin(phi)
+    y = np.sin(theta)*np.sin(phi)
+    z = np.cos(phi)
+    return x, y, z
+
 
 def find_adsorption_site(system, center, prob_dist):
-    # find the adsorption site by maximizing the distance from all the atoms while
-    # keep the distance fixed at some predefined distace
-    tries = 10000
+    # find the adsorption site by maximizing the distance
+    # from all the atoms while keep the distance fixed
+    # at some predefined distance
+    tries = 1000
     sum_distance = []
     probe_positions = []
     for i in range(0, tries):
@@ -993,7 +1101,7 @@ def make_subsystem(coord, system, dist_check):
 def get_metal_surface_area(fcenter, metal_element, system):
     center = system.lattice.get_cartesian_coords(fcenter)
 
-    vdw_probe = 1.8405  # 1.52 #0.25 #2.1 #1.52 #vdw radius for oxygen
+    vdw_probe = 1.86  # 1.52 #0.25 #2.1 #1.52 #vdw radius for oxygen
     # use 0.0 for vdw_probe to get sphere of metal
     metal_full_surface_area = sphere_area(metal_element, vdw_probe)
     count = 0
@@ -1005,14 +1113,14 @@ def get_metal_surface_area(fcenter, metal_element, system):
         # pos=generate_random_position(center,metal_element,vdw_probe) #vdw_probe
         print('xx', pos[0], pos[1], pos[2], file=params_file)
         pos_f = system.lattice.get_fractional_coords(pos)
-        if not check_for_overalp(center, pos_f, system, vdw_probe):
+        if not check_for_overlap(center, pos_f, system, vdw_probe):
             count += 1
     sa_frac = float(count)/float(mc_tries)  # metal_full_surface_area
     sa = metal_full_surface_area*sa_frac
     return sa_frac, sa
 
 
-def check_for_overalp(center, pos, system, r_probe):
+def check_for_overlap(center, pos, system, r_probe):
     # pos=[0.0,0.0,0.0]
     # print  'N 1.0',pos[0],pos[1],pos[2],'biso 1.0 N'
     distances = system.lattice.get_all_distances(pos, system.frac_coords)
