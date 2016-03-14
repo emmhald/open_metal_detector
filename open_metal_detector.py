@@ -160,33 +160,47 @@ def analyze_structure(filename, sfile, cont, source_folder,
     for a in range(0, len(system)):
         all_coord_spheres.append(find_coord_sphere_using_dist(a, system, dist_all[a])[0])
 
-    cs_list = []  # list of coordination sequences for each open metal found
-    for m, open_metal_candidate \
-            in enumerate(first_coordnation_structure_each_metal):
-        site_dict = dict()
-        op, pr, t, tf, min_dih, all_dih = check_if_open(open_metal_candidate,
-                                                        tolerance)
-        site_dict = update_output_dict(site_dict, op, pr, t, tf,
-                                       str(open_metal_candidate.species[0]),
-                                       open_metal_candidate.num_sites-1,
-                                       min_dih, all_dih)
+    oms_cs_list = []  # list of coordination sequences for each open metal found
+    cms_cs_list = []  # list of coordination sequences for each closed metal found
+    for m, omc in enumerate(first_coordnation_structure_each_metal):
+        # site_dict is a dictionary holding all the information for a metal site
+        # is ubdated by check_if_open
+        op, pr, site_dict = check_if_open(omc, tolerance)
+
+        m_index = match_index(omc, system)
+
+        cs = find_coordination_sequence(m_index, system, all_coord_spheres)
 
         if op:
-            if attach_ads:
-                oms_index = match_index(str(open_metal_candidate.species[0]),
-                                        open_metal_candidate.frac_coords[0],
-                                        system)
-                # site_dict["oms_id"], cs_list = unique_site_simple(oms_index, system, cs_list, output_folder, mof_name,molecule_file) # general way to add adsorbate (still debugging)
-                site_dict["oms_id"], cs_list = unique_site(oms_index, system, cs_list, output_folder, mof_name,molecule_file, all_coord_spheres)
+            cs_list = oms_cs_list
+        else:
+            cs_list = cms_cs_list
 
-            if not output_json['metal_sites_found']:
-                output_json['metal_sites_found'] = True
-            if pr:
-                output_json['problematic'] = True
-        xyz_name = mof_name+'first_coordination_sphere'+str(m)+'.xyz'
-        output_string = output_folder+'/'+xyz_name
-        xyzio.XYZ(open_metal_candidate).write_file(output_string)
+        m_id, new_site = find_metal_id(cs_list, cs)
+        site_dict["oms_id"] = m_id
+        if new_site:
+            print('New site found')
+            site_dict["unique"] = True
+            cs_list.append(cs)
+
+        if op and attach_ads and new_site:
+            # general way to add adsorbate (still debugging)
+            # unique_site_simple(m_index, m_id, system, cs_list,
+            #                    output_folder, mof_name, molecule_file)
+            unique_site(m_index, m_id, system, output_folder, mof_name,
+                        molecule_file)
+
+        if op and not output_json['metal_sites_found']:
+            output_json['metal_sites_found'] = True
+
+        if pr:
+            output_json['problematic'] = True
+
         output_json['metal_sites'].append(site_dict)
+
+        xyz_name = mof_name+'first_coordination_sphere'+str(m)+'.xyz'
+        output_fname = output_folder+'/'+xyz_name
+        xyzio.XYZ(omc).write_file(output_fname)
 
     print('Checking for OMSs done. Writing files')
 
@@ -229,9 +243,11 @@ def get_output_dict(mof_name, m_surface_area, m_sa_frac, volume):
     return output_json
 
 
-def update_output_dict(site_dict, op, pr, t, tf, spec,
-                       open_metal_candidate_number, min_dih, all_dih):
+def update_output_dict(open_metal_candidate, site_dict, op, pr, t, tf, min_dih,
+                       all_dih):
 
+    spec = str(open_metal_candidate.species[0])
+    open_metal_candidate_number = open_metal_candidate.num_sites-1
     site_dict["is_open"] = op
     site_dict["t_factor"] = tf
     site_dict["metal"] = spec
@@ -251,53 +267,53 @@ def update_output_dict(site_dict, op, pr, t, tf, spec,
     return site_dict
 
 
-def unique_site(oms_index, system, cs_list, output_folder, mof_name,molecule_file, all_coord_spheres):
-    cs = find_coordination_sequence(oms_index, system, all_coord_spheres)
-    oms_id, new_site = find_oms_id(cs_list, cs)
+def unique_site(oms_index, oms_id, system, output_folder, mof_name, molecule_file):
+    # cs = find_coordination_sequence(oms_index, system, all_coord_spheres)
+    # oms_id, new_site = find_metal_id(cs_list, cs)
     mof_filename = output_folder+'/'+mof_name
-    if new_site:
-        print('New site found')
-        cs_list.append(cs)
-        end_to_end = 2.32
-        eles = ['O', 'O', 'C']
-        ads = add_co2_simple(system, oms_index, end_to_end, eles)
-        mof_with_co2 = merge_structures(ads, system)
-        cif = CifWriter(ads)
-        cif.write_file(mof_filename+'_co2_'+str(oms_id)+'.cif')
+    # if new_site:
 
-        cif = CifWriter(mof_with_co2)
-        output_filename = mof_filename
-        output_filename += '_first_coordination_sphere_with_co2_'
-        output_filename += str(oms_id)+'.cif'
-        cif.write_file(output_filename)
+    end_to_end = 2.32
+    eles = ['O', 'O', 'C']
+    ads = add_co2_simple(system, oms_index, end_to_end, eles)
+    mof_with_co2 = merge_structures(ads, system)
+    cif = CifWriter(ads)
+    cif.write_file(mof_filename+'_co2_'+str(oms_id)+'.cif')
 
-        end_to_end = 1.1
-        eles = ['N', 'N']
-        ads = add_co2_simple(system, oms_index, end_to_end, eles)
-        mof_with_co2 = merge_structures(ads, system)
-        cif = CifWriter(ads)
-        cif.write_file(mof_filename+'_n2_'+str(oms_id)+'.cif')
-        cif = CifWriter(mof_with_co2)
-        output_filename = mof_filename
-        output_filename += 'first_coordination_sphere_with_n2'
-        output_filename += str(oms_id)+'.cif'
-        cif.write_file(output_filename)
+    cif = CifWriter(mof_with_co2)
+    output_filename = mof_filename
+    output_filename += '_first_coordination_sphere_with_co2_'
+    output_filename += str(oms_id)+'.cif'
+    cif.write_file(output_filename)
 
-        # end_to_end = 1.54
-        # eles = ['C','C']
-        # ads = add_co2_simple(system,oms_index,end_to_end,eles)
-        # mof_with_ethane = merge_structures(ads,system)
-        # cif = CifWriter(ads)
-        # cif.write_file(mof_filename+'_ethane_'+str(oms_id)+'.cif')
-        # cif = CifWriter(mof_with_ethane)
-        # output_filename = mof_filename
-        # output_filename += 'first_coordination_sphere_with_ethane'
-        # output_filename += str(oms_id)+'.cif'
-        # cif.write_file(output_filename)
+    end_to_end = 1.1
+    eles = ['N', 'N']
+    ads = add_co2_simple(system, oms_index, end_to_end, eles)
+    mof_with_co2 = merge_structures(ads, system)
+    cif = CifWriter(ads)
+    cif.write_file(mof_filename+'_n2_'+str(oms_id)+'.cif')
+    cif = CifWriter(mof_with_co2)
+    output_filename = mof_filename
+    output_filename += 'first_coordination_sphere_with_n2'
+    output_filename += str(oms_id)+'.cif'
+    cif.write_file(output_filename)
 
-    return oms_id, cs_list
+    # end_to_end = 1.54
+    # eles = ['C','C']
+    # ads = add_co2_simple(system,oms_index,end_to_end,eles)
+    # mof_with_ethane = merge_structures(ads,system)
+    # cif = CifWriter(ads)
+    # cif.write_file(mof_filename+'_ethane_'+str(oms_id)+'.cif')
+    # cif = CifWriter(mof_with_ethane)
+    # output_filename = mof_filename
+    # output_filename += 'first_coordination_sphere_with_ethane'
+    # output_filename += str(oms_id)+'.cif'
+    # cif.write_file(output_filename)
 
-def find_oms_id(cs_list, cs):
+    return
+
+
+def find_metal_id(cs_list, cs):
     """Check if a given site is unique based on its coordination sequence"""
     for i, cs_i in enumerate(cs_list):
         if compare_lists(cs_i, cs):
@@ -346,8 +362,7 @@ def write_xyz_file(filename, system):
 def find_all_coord_spheres(centers, structure):
     coord_spheres = []
     for i, c in enumerate(centers):
-        c_index = match_index(str(centers.species[i]), centers.frac_coords[i],
-                              structure)
+        c_index = match_index(centers, structure)
         coord_spheres.append(find_coord_sphere(c_index, structure)[1])
     return coord_spheres
 
@@ -505,7 +520,9 @@ def split_structure_to_organic_and_metal(structure):
     return structure_metal, structure_organic
 
 
-def match_index(ele, f_coords, system):
+def match_index(metal, system):
+    ele = str(metal.species[0])
+    f_coords = metal.frac_coords[0]
     dist = system.lattice.get_all_distances(f_coords, system.frac_coords)
     for i, d in enumerate(dist[0]):
         if d < 0.001 and str(system.species[i]) == ele:
@@ -520,6 +537,8 @@ def check_if_6_or_more(system):
 
 
 def check_if_open(system, tolerance):
+
+    site_dict = dict()
     tf = get_t_factor(system)
 
     problematic = False
@@ -550,7 +569,18 @@ def check_if_open(system, tolerance):
         open_metal_mof, test, min_dihid, all_dihidrals = \
             check_non_metal_dihedrals(system, test, tolerance)
 
-    return open_metal_mof, problematic, test, tf, min_dihid, all_dihidrals
+
+    site_dict = update_output_dict(system,
+                                   site_dict,
+                                   open_metal_mof,
+                                   problematic,
+                                   test,
+                                   tf,
+                                   min_dihid,
+                                   all_dihidrals)
+
+    # return open_metal_mof, problematic, test, tf, min_dihid, all_dihidrals, site_dict
+    return open_metal_mof, problematic, site_dict
 
 
 def get_t_factor(coordination_sphere):
@@ -846,25 +876,22 @@ def add_co2_simple(structure, oms_index, end_to_end, eles):
     print('Min adsorbate distance from framework:', min(dists), max(dists))
     return Structure(structure.lattice, adsorption_site, adsorption_pos)
 
-def unique_site_simple(oms_index, system, cs_list, output_folder, mof_name, molecule_file, all_coord_spheres):
-    cs = find_coordination_sequence(oms_index, system, all_coord_spheres)
-    oms_id, new_site = find_oms_id(cs_list, cs)
+
+def unique_site_simple(oms_index, oms_id, system, output_folder, mof_name,
+                       molecule_file):
     mof_filename = output_folder+'/'+mof_name
     molecule_name = molecule_file.split('.'+'prm')[0]
-    if new_site:
-        print('New site found')
-        cs_list.append(cs)
-        ads = add_adsorbate_simple(system,oms_index,molecule_file)
-        mof_with_adsorbate = merge_structures(ads, system)
-        cif = CifWriter(mof_with_adsorbate)
-        cif.write_file(mof_filename+'_'+molecule_name+str(oms_id)+'_1.cif')
-        cif = CifWriter(mof_with_adsorbate)
-        output_filename = mof_filename
-        output_filename += '_first_coordination_sphere_with_'+molecule_name
-        output_filename += str(oms_id)+'_1.cif'
-        cif.write_file(output_filename)
-    return oms_id, cs_list
 
+    ads = add_adsorbate_simple(system,oms_index,molecule_file)
+    mof_with_adsorbate = merge_structures(ads, system)
+    cif = CifWriter(mof_with_adsorbate)
+    cif.write_file(mof_filename+'_'+molecule_name+str(oms_id)+'_1.cif')
+    cif = CifWriter(mof_with_adsorbate)
+    output_filename = mof_filename
+    output_filename += '_first_coordination_sphere_with_'+molecule_name
+    output_filename += str(oms_id)+'_1.cif'
+    cif.write_file(output_filename)
+    return
 
 def adsorbate_placement(system, molecule_file, ads_vector):
     coords, coords2, atom_type, ads_frac, com_frac, mol_com_rotated = [], [], [], [], [], []
