@@ -221,14 +221,12 @@ class atoms:
         'Cm': 1.69
     }
 
-
     def __init__(self):
         self.co = dict()
         self.atomic_number = dict()
 
-        self.metals=list()
+        self.metals = list()
         self.define_metals()
-
 
     @classmethod
     def get_covelent_radius(cls, ele):
@@ -388,6 +386,15 @@ class atoms:
         else:
             return False
 
+    @classmethod
+    def get_max_bond(cls):
+        """Get the maximum possible distance
+        Get the maximum possible covalent radius, multilpy by 1.1 to be safe
+        and compute the maximum bond distance as twice that plus the maximum
+        tolerance
+        """
+        max_co = max([cls.co[k] for k in cls.co])*1.1
+        return max_co*2.0 + 0.4
 
 
 

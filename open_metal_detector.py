@@ -153,6 +153,13 @@ def analyze_structure(filename, sfile, cont, source_folder,
     output_json = get_output_dict(mof_name, m_surface_area, m_sa_frac,
                                   system.volume)
 
+    dist_all = system.lattice.get_all_distances(system.frac_coords,
+                                                system.frac_coords)
+
+    all_coord_spheres = []
+    for a in range(0, len(system)):
+        all_coord_spheres.append(find_coord_sphere_using_dist(a, system, dist_all[a])[0])
+
     cs_list = []  # list of coordination sequences for each open metal found
     for m, open_metal_candidate \
             in enumerate(first_coordnation_structure_each_metal):
@@ -163,20 +170,21 @@ def analyze_structure(filename, sfile, cont, source_folder,
                                        str(open_metal_candidate.species[0]),
                                        open_metal_candidate.num_sites-1,
                                        min_dih, all_dih)
+
         if op:
             if attach_ads:
                 oms_index = match_index(str(open_metal_candidate.species[0]),
                                         open_metal_candidate.frac_coords[0],
                                         system)
-                site_dict["oms_id"], cs_list = \
-                    unique_site_simple(oms_index, system, cs_list,
-                                output_folder, mof_name,molecule_file) # general way to add adsorbate (still debugging)
+                # site_dict["oms_id"], cs_list = unique_site_simple(oms_index, system, cs_list, output_folder, mof_name,molecule_file) # general way to add adsorbate (still debugging)
+                site_dict["oms_id"], cs_list = unique_site(oms_index, system, cs_list, output_folder, mof_name,molecule_file, all_coord_spheres)
+
             if not output_json['metal_sites_found']:
                 output_json['metal_sites_found'] = True
             if pr:
                 output_json['problematic'] = True
-        output_string = \
-            output_folder+'/'+mof_name+'first_coordination_sphere'+str(m)+'.xyz'
+        xyz_name = mof_name+'first_coordination_sphere'+str(m)+'.xyz'
+        output_string = output_folder+'/'+xyz_name
         xyzio.XYZ(open_metal_candidate).write_file(output_string)
         output_json['metal_sites'].append(site_dict)
 
@@ -242,8 +250,9 @@ def update_output_dict(site_dict, op, pr, t, tf, spec,
 
     return site_dict
 
-def unique_site(oms_index, system, cs_list, output_folder, mof_name,molecule_file):
-    cs = find_coordination_sequence(oms_index, system)
+
+def unique_site(oms_index, system, cs_list, output_folder, mof_name,molecule_file, all_coord_spheres):
+    cs = find_coordination_sequence(oms_index, system, all_coord_spheres)
     oms_id, new_site = find_oms_id(cs_list, cs)
     mof_filename = output_folder+'/'+mof_name
     if new_site:
@@ -274,17 +283,17 @@ def unique_site(oms_index, system, cs_list, output_folder, mof_name,molecule_fil
         output_filename += str(oms_id)+'.cif'
         cif.write_file(output_filename)
 
-        end_to_end = 1.54
-        eles = ['C','C']
-        ads = add_co2_simple(system,oms_index,end_to_end,eles)
-        mof_with_ethane = merge_structures(ads,system)
-        cif = CifWriter(ads)
-        cif.write_file(mof_filename+'_ethane_'+str(oms_id)+'.cif')
-        cif = CifWriter(mof_with_ethane)
-        output_filename = mof_filename
-        output_filename += 'first_coordination_sphere_with_ethane'
-        output_filename += str(oms_id)+'.cif'
-        cif.write_file(output_filename)
+        # end_to_end = 1.54
+        # eles = ['C','C']
+        # ads = add_co2_simple(system,oms_index,end_to_end,eles)
+        # mof_with_ethane = merge_structures(ads,system)
+        # cif = CifWriter(ads)
+        # cif.write_file(mof_filename+'_ethane_'+str(oms_id)+'.cif')
+        # cif = CifWriter(mof_with_ethane)
+        # output_filename = mof_filename
+        # output_filename += 'first_coordination_sphere_with_ethane'
+        # output_filename += str(oms_id)+'.cif'
+        # cif.write_file(output_filename)
 
     return oms_id, cs_list
 
@@ -346,19 +355,25 @@ def find_all_coord_spheres(centers, structure):
 def find_coord_sphere(center, structure):
     dist = structure.lattice.get_all_distances(structure.frac_coords[center],
                                                structure.frac_coords)
-    center_structure = Structure(structure.lattice, [structure.species[center]],
-                                 [structure.frac_coords[center]])
+    res = find_coord_sphere_using_dist(center, structure, dist[0])
+    coord_sphere, coord_sphere_structure = res
+    return coord_sphere, coord_sphere_structure
 
-    if dist[0][center] > 0.0000001:
+
+def find_coord_sphere_using_dist(center, structure, dist):
+    if dist[center] > 0.0000001:
         sys.exit('The self distance appears to be non-negative')
 
     # ligands_structure_new = None
     ligands_structure_new = Structure(structure.lattice,
                                       [structure.species[center]],
                                       [structure.frac_coords[center]])
+    max_bond = ap.get_max_bond()
     coord_sphere = [center]
-    for i, dis in enumerate(dist[0]):
+    for i, dis in enumerate(dist):
         if i == center:
+            continue
+        if dis > max_bond:
             continue
         species_one = str(structure.species[center])
         species_two = str(structure.species[i])
@@ -366,15 +381,17 @@ def find_coord_sphere(center, structure):
         bond_tol = tol
         if ap.bond_check(species_one, species_two, dis, bond_tol):
             coord_sphere.append(i)
-            try:
-                ligands_structure_new.append(str(structure.species[i]),
-                                             structure.frac_coords[i])
-            except Exception as e:
-                ligands_structure_new = Structure(structure.lattice,
-                                                  [structure.species[i]],
-                                                  [structure.frac_coords[i]]
-                                                  )
+            ligands_structure_new.append(species_two, structure.frac_coords[i])
+
     ligands = ap.keep_valid_bonds(ligands_structure_new, 0)
+    #TODO remove extra atoms from coordination sphere after keeping only valid bonds
+    # coord_sphere_kept = []
+    # for i, l in enumerate(ligands_structure_new):
+    #     for j, lv in enumerate(ligands):
+    #         if l == lv:
+    #             coord_sphere_kept.append(coord_sphere[i])
+    #             continue
+
     # ligands.insert(0, structure.species[center], structure.frac_coords[center])
     coord_sphere_structure = center_around_metal(ligands)
     return coord_sphere, coord_sphere_structure
@@ -829,8 +846,8 @@ def add_co2_simple(structure, oms_index, end_to_end, eles):
     print('Min adsorbate distance from framework:', min(dists), max(dists))
     return Structure(structure.lattice, adsorption_site, adsorption_pos)
 
-def unique_site_simple(oms_index, system, cs_list, output_folder, mof_name, molecule_file):
-    cs = find_coordination_sequence(oms_index, system)
+def unique_site_simple(oms_index, system, cs_list, output_folder, mof_name, molecule_file, all_coord_spheres):
+    cs = find_coordination_sequence(oms_index, system, all_coord_spheres)
     oms_id, new_site = find_oms_id(cs_list, cs)
     mof_filename = output_folder+'/'+mof_name
     molecule_name = molecule_file.split('.'+'prm')[0]
@@ -1172,11 +1189,17 @@ def generate_random_vector():
     return ran_vec
 
 
-def find_coordination_sequence(center, structure):
+def find_coordination_sequence(center, structure, all_coord_spheres):
     """computes the coordination sequence up to the Nth coordination shell
     as input it takes the MOF as a pymatgen Structure and the index of the
     center metal in the Structure
     """
+    # dist_all = structure.lattice.get_all_distances(structure.frac_coords,
+    #                                                structure.frac_coords)
+
+    # all_coord_spheres = []
+    # for a in range(0, len(structure)):
+    #     all_coord_spheres.append(find_coord_sphere_using_dist(a, structure, dist_all[a])[0])
     # The shell_list is a set with the index of each atom and its unit
     # cell index realtive to a cetral unit cell
     shell_list = {(center, (0, 0, 0))}
@@ -1188,39 +1211,69 @@ def find_coordination_sequence(center, structure):
     coords = [[structure.frac_coords[center][0],
                structure.frac_coords[center][1],
                structure.frac_coords[center][2]]]
-    coordination_structure = (Structure(structure.lattice, ele, coords))
+    # coordination_structure = (Structure(structure.lattice, ele, coords))
+    coord_sphere_time = 0.0
+    count_total = 0
     for n in range(0, n_shells):
         c_set = set([])
         for a_uc in shell_list:
             a = a_uc[0]
             lattice = a_uc[1]
-            coord_sphere = find_coord_sphere(a, structure)[0]
+            t0 = time.time()
+            #TODO make finding coordination sphere faster
+            # coord_sphere = find_coord_sphere_using_dist(a, structure,
+            #                                             dist_all[a])[0]
+            # print(a)
+            # print(coord_sphere)
+            # print(find_coord_sphere_using_dist(a, structure,
+            #                                             dist_all[a])[1])
+            # input()
+            coord_sphere = all_coord_spheres[a]
+            count_total += 1
+            t1 = time.time()
+            coord_sphere_time += t1-t0
             coord_sphere_with_uc = []
             for c in coord_sphere:
-                dist = structure.lattice.\
-                    get_all_distance_and_image(structure.frac_coords[a],
-                                               structure.frac_coords[c])
-                uc = lattice - min(dist)[1]
-                coord_sphere_with_uc.append((c, tuple(uc)))
+                # dist = structure.lattice.\
+                #     get_all_distance_and_image(structure.frac_coords[a],
+                #                                structure.frac_coords[c])
+                #
+                # uc = tuple(l-nl for l, nl in zip(lattice, min(dist)[1]))
+
+                diff = structure.frac_coords[a] - structure.frac_coords[c]
+                new_lat_i = [round(d, 0) for d in diff]
+                uc = tuple(l-nl for l, nl in zip(lattice, new_lat_i))
+
+                # check = [(d-md) < 1e-5 for d, md in zip(new_lat_i, min(dist)[1])]
+                # if not any(check):
+                #     print(min(dist)[1])
+                #     print(new_lat_i)
+                #     print(check)
+                #     input()
+
+                coord_sphere_with_uc.append((c, uc))
             coord_sphere_with_uc = tuple(coord_sphere_with_uc)
             c_set = c_set.union(set(coord_sphere_with_uc))
         for a in shell_list_prev:
             c_set.discard(a)
         for a in shell_list:
             c_set.discard(a)
-        for i_uc in c_set:
-            i = i_uc[0]
-            ele = ap().elements[n+3]
-            coords = [structure.frac_coords[i][0], structure.frac_coords[i][1],
-                      structure.frac_coords[i][2]]
-            coordination_structure.append(ele, coords)
+        # for i_uc in c_set:
+        #     i = i_uc[0]
+        #     ele = ap().elements[n+3]
+        #     coords = [structure.frac_coords[i][0], structure.frac_coords[i][1],
+        #               structure.frac_coords[i][2]]
+        #     coordination_structure.append(ele, coords)
 
         cs.append(len(c_set))
         all_shells = all_shells.union(c_set)
-        shell_list_prev = set(shell_list)
-        shell_list = set(c_set)
+        shell_list_prev = shell_list
+        shell_list = c_set
     # coordination_structure = center_around_metal(coordination_structure)
-    write_xyz_file('temp.xyz', coordination_structure)
+    # write_xyz_file('temp.xyz', coordination_structure)
+    # print('coordination sphere time:', coord_sphere_time, count_total, len(structure))
+    # print('Coordination Sphere: ', cs)
+    # input()
     return cs
 
 
