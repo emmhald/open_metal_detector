@@ -142,6 +142,7 @@ def analyze_structure(filename, sfile, cont, source_folder,
     if metal.num_sites == 0:
         print(mof_name+' : No metal was found in structure', end="",
               file=summary_mofs)
+        print(mof_name+' : No metal was found in structure', end="")
         summary_mofs.close()
         return
 
@@ -294,7 +295,7 @@ def unique_site(oms_index, oms_id, system, output_folder, mof_name, molecule_fil
     cif.write_file(mof_filename+'_n2_'+str(oms_id)+'.cif')
     cif = CifWriter(mof_with_co2)
     output_filename = mof_filename
-    output_filename += 'first_coordination_sphere_with_n2'
+    output_filename += '_first_coordination_sphere_with_n2_'
     output_filename += str(oms_id)+'.cif'
     cif.write_file(output_filename)
 
@@ -362,7 +363,9 @@ def write_xyz_file(filename, system):
 def find_all_coord_spheres(centers, structure):
     coord_spheres = []
     for i, c in enumerate(centers):
-        c_index = match_index(centers, structure)
+        s_ = Structure(structure.lattice, [centers.species[i]],
+                       [centers.frac_coords[i]])
+        c_index = match_index(s_, structure)
         coord_spheres.append(find_coord_sphere(c_index, structure)[1])
     return coord_spheres
 
@@ -841,7 +844,7 @@ def add_co2(v1, v2, v3, v4, system):
 
 def add_co2_simple(structure, oms_index, end_to_end, eles):
 
-    ads_dist = 2.2
+    ads_dist = 2.4
     # end_to_end = 2.32
     bond = end_to_end/2
     # eles = ['O', 'O', 'C']
@@ -1238,7 +1241,7 @@ def find_coordination_sequence(center, structure, all_coord_spheres):
     coords = [[structure.frac_coords[center][0],
                structure.frac_coords[center][1],
                structure.frac_coords[center][2]]]
-    # coordination_structure = (Structure(structure.lattice, ele, coords))
+   # coordination_structure = (Molecule(ele, coords))
     coord_sphere_time = 0.0
     count_total = 0
     for n in range(0, n_shells):
@@ -1287,17 +1290,20 @@ def find_coordination_sequence(center, structure, all_coord_spheres):
             c_set.discard(a)
         # for i_uc in c_set:
         #     i = i_uc[0]
+        #     uc = i_uc[1]
         #     ele = ap().elements[n+3]
-        #     coords = [structure.frac_coords[i][0], structure.frac_coords[i][1],
-        #               structure.frac_coords[i][2]]
-        #     coordination_structure.append(ele, coords)
+        #     coords = [structure.frac_coords[i][0] - uc[0],
+        #               structure.frac_coords[i][1] - uc[1],
+        #               structure.frac_coords[i][2] - uc[2]]
+        #     coords = structure.lattice.get_cartesian_coords(coords)
+        #     coordination_structure.append(ele, coords, validate_proximity=False)
 
         cs.append(len(c_set))
         all_shells = all_shells.union(c_set)
         shell_list_prev = shell_list
         shell_list = c_set
     # coordination_structure = center_around_metal(coordination_structure)
-    # write_xyz_file('temp.xyz', coordination_structure)
+    # write_xyz_file('_cs.xyz', coordination_structure)
     # print('coordination sphere time:', coord_sphere_time, count_total, len(structure))
     # print('Coordination Sphere: ', cs)
     # input()
