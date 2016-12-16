@@ -239,12 +239,17 @@ class atoms:
 
     @classmethod
     def check_if_metal(cls, ele):
-        is_metal=True
-        list_of_non_metals=['H','D','Li','K','B','C','N','O','F','Si','P','S','Cl','Br','I']
-        for non_metal in list_of_non_metals:
-            if ele == non_metal:
-                is_metal=False
-        return is_metal
+        list_of_non_metals = ['H','D','Li','K','B','C','N','O','F','Si','P','S','Cl','Br','I']
+        if ele not in list_of_non_metals and not cls.check_if_first_row(ele):
+            return True
+        return False
+
+    @classmethod
+    def check_if_first_row(cls, ele):
+        list_of_first_row = ['Li', 'Na', 'K', 'Rb', 'Cs', 'Fr']
+        if ele in list_of_first_row:
+            return True
+        return False
 
 
     @classmethod
@@ -259,7 +264,7 @@ class atoms:
         if cls.check_if_heavy_metal_bond(ele1, ele2):
             return 0.2
         else:
-            return 0.4
+            return 0.5  #0.4
 
     def define_metals(self):
         for e in self.elements:
@@ -291,6 +296,13 @@ class atoms:
     def is_group1(cls, ele):
         list_of_non_metals = ['Li', 'Na', 'K', 'Rb', 'Cs', 'Fr']
         if ele in list_of_non_metals:
+            return True
+        else:
+            return False
+
+    @classmethod
+    def is_d4_or_less(cls, ele):
+        if cls.atomic_number[ele] < 54:
             return True
         else:
             return False
@@ -359,11 +371,13 @@ class atoms:
 
     @classmethod
     def is_valid(cls, ligands, l, i, dis):
+        center = str(ligands.species[0])
         species_one = str(ligands.species[l])
         species_two = str(ligands.species[i])
         tol = cls.get_bond_tolerance(species_one, species_two)
         if cls.check_if_metal(species_one) and cls.check_if_metal(species_two):
-            return True
+            if species_one == center and species_two == center:
+                return True
         if species_one == 'C' and species_two == 'C':
             return True
         if cls.bond_check(species_one, species_two, dis, tol):
