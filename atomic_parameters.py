@@ -239,8 +239,9 @@ class atoms:
 
     @classmethod
     def check_if_metal(cls, ele):
-        list_of_non_metals = ['H','D','Li','K','B','C','N','O','F','Si','P','S','Cl','Br','I']
-        if ele not in list_of_non_metals and not cls.check_if_first_row(ele):
+        list_of_non_metals = ['H', 'D', 'B', 'C', 'N', 'O', 'F', 'Si', 'P', 'S',
+                              'Cl', 'Br', 'I']
+        if ele not in list_of_non_metals:
             return True
         return False
 
