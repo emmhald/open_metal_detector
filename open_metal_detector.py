@@ -139,12 +139,6 @@ def analyze_structure(filename, sfile, cont, source_folder,
     print("\n", filename)
 
     metal, organic = split_structure_to_organic_and_metal(system)
-    if metal.num_sites == 0:
-        print(mof_name+' : No metal was found in structure', end="",
-              file=summary_mofs)
-        print(mof_name+' : No metal was found in structure', end="")
-        summary_mofs.close()
-        return
 
     m_sa_frac, m_surface_area = 0.0, 0.0
     # m_sa_frac,m_surface_areaget_metal_surface_areas(metal,system)
