@@ -236,7 +236,13 @@ def collect_statistics(json_dicts, analysis_folder):
     precent_open_mofs = 100.0 * count_open / tot_mofs
     tot_sites = sum([s[1]['count_sites'] for s in stats_sorted])
     tot_sites_open = sum([s[1]['count_open_sites'] for s in stats_sorted])
-    precent_open_sites = 100.0 * tot_sites_open / tot_sites
+
+    try:
+        precent_open_sites = 100.0 * tot_sites_open / tot_sites
+    except ZeroDivisionError:
+        "No metal sites were found"
+        precent_open_sites = 0.0
+
 
     print("\nTotal MOFs: {0:}\nMOFs with Open Metal Site: {1:}\n"
           "Percentage of MOFs with OMS: {2:2.2f}%\n"
