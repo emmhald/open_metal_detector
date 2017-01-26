@@ -102,6 +102,11 @@ def analyze_for_tfac_using_json(json_dicts, analysis_folder):
 
     # r = re.compile("([a-zA-Z]+)(-?(?:\d+())?(?:\.\d*())?(?:e-?\d+())?(?:\©|\1\3))")
 
+    import itertools
+    for yn, nl in itertools.product(['yes', 'no'], [4, 5, 6]):
+        outfilename = yn + '_' + str(nl) + '.out'
+        outpath = tfac_analysis_folder + '/' + outfilename
+        open(outpath, 'w').close()
     yes_or_no = {True: 'yes', False: 'no'}
 
     for json_dict in json_dicts:
