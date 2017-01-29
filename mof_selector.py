@@ -167,8 +167,10 @@ def collect_statistics(json_dicts, analysis_folder):
             stats[metal].setdefault('count_open_sites', 0)
             stats[metal].setdefault('count_open_mofs', 0)
             for t in range(0, 7):
-                stats[metal].setdefault('l'+str(t), 0)
+                stats[metal].setdefault('l' + str(t) + '_o', 0)
+                stats[metal].setdefault('l' + str(t), 0)
             stats[metal].setdefault('lover', 0)
+            stats[metal].setdefault('lover_o', 0)
 
     for json_dict in json_dicts:
         struc = json_dict['material_name']
@@ -177,6 +179,8 @@ def collect_statistics(json_dicts, analysis_folder):
         metal_sites = json_dict['metal_sites']
 
         all_metals = [ms['metal'] for ms in metal_sites if ms['unique']]
+        all_num_linkers = [ms['number_of_linkers'] for ms in metal_sites if
+                           ms['unique']]
 
         # oms_type = [(ms['metal'], ms['number_of_linkers']) for ms in metal_sites
         #             if ms['unique'] and ms['is_open']]
@@ -193,16 +197,22 @@ def collect_statistics(json_dicts, analysis_folder):
         for m in set(oms_metals):
             stats[m]['count_open_mofs'] += 1
 
-        for m in all_metals:
+        for l, m in zip(all_num_linkers, all_metals):
+            nl = 'l'+str(l)
+            if l > 6:
+                nl = 'lover'
+            stats[m][nl] += 1
             stats[m]['count_sites'] += 1
 
         for l, m in zip(oms_num_linkers, oms_metals):
             # m, l = om
-            nl = 'l'+str(l)
+            nl = 'l'+str(l) + '_o'
             if l > 6:
-                nl = 'lover'
-            stats[m]['count_open_sites'] += 1
+                nl = 'lover_o'
             stats[m][nl] += 1
+            stats[m]['count_open_sites'] += 1
+
+
 
 
     # This returns a sorted tuple based on keyfunc,
@@ -228,8 +238,10 @@ def collect_statistics(json_dicts, analysis_folder):
         printout = [metal, s['count_mofs'], s['count_open_mofs'],
                     s['count_sites'], s['count_open_sites'],
                     percent_mof, percent_oms,
-                    s['l0'], s['l1'], s['l2'], s['l3'], s['l4'], s['l5'],
-                    s['l6'], s['lover']]
+                    s['l0_o'], s['l0'], s['l1_o'], s['l1'], s['l2_o'], s['l2'],
+                    s['l3_o'], s['l3'], s['l4_o'], s['l4'], s['l5_o'], s['l5'],
+                    s['l6_o'], s['l6'], s['lover_o'], s['lover']]
+
         printouts.append(printout)
         # if ap.is_group1(metal):
         #     continue
@@ -272,11 +284,12 @@ def collect_statistics(json_dicts, analysis_folder):
 
 def print_stats(titles, printouts, fstats):
 
-    print("{0:6}{1:^12}{2:^12}{3:^12}{4:^18}{5:^14}{6:^14}{7:^6}{8:^6}{9:^6}"
-          "{10:^6}{11:^6}{12:^6}{13:^8}{14:^8}".format(*titles), file=fstats)
+    print("{0:6}{1:^12}{2:^12}{3:^12}{4:^18}{5:^14}{6:^14}{7:^9}{8:^9}{9:^9}"
+          "{10:^9}{11:^9}{12:^9}{13:^11}{14:^11}".format(*titles), file=fstats)
     for p in printouts:
-        print("{0:6}{1:^12}{2:^12}{3:^12}{4:^18}{5:^14}{6:^15}{7:^6}{8:^6}"
-              "{9:^6}{10:^6}{11:^6}{12:^6}{13:^8}{14:^8}".format(*p),
+        print("{0:6}{1:^12}{2:^12}{3:^12}{4:^18}{5:^14}{6:^15}{7:>4}/{8:<4}"
+              "{9:>4}/{10:<4}{11:>4}/{12:<4}{13:>4}/{14:<4}{15:>4}/{16:<4}"
+              "{17:>4}/{18:<4}{19:>4}/{20:<4}{21:>5}/{22:<5}".format(*p),
               file=fstats)
 
 
