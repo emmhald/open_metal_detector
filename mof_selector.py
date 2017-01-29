@@ -291,7 +291,7 @@ def copy_folder(dest, src):
 
 def keyfunc(tup):
     key, d = tup
-    return -d["count_open_sites"]
+    return -d["count_mofs"]
 
 
 def fetch_list_of_n_omtype_tf(json_dict):
