@@ -5,3 +5,5 @@ output*
 analysis
 *.cif
 *.out
+.idea/
+itertools
