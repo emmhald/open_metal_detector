@@ -20,6 +20,7 @@ import re
 # from pymatgen.io.smart import read_structure, write_structure
 import argparse
 from atomic_parameters import atoms as ap
+import csv
 
 
 def main():
@@ -155,7 +156,7 @@ def collect_statistics(json_dicts, analysis_folder):
         return
     count_open = 0.0
     stats = dict()
-    mof_open = dict()
+    mof_open_status = dict()
     # check_count = dict()
     for json_dict in json_dicts:
         metal_sites = json_dict['metal_sites']
@@ -174,8 +175,10 @@ def collect_statistics(json_dicts, analysis_folder):
 
     for json_dict in json_dicts:
         struc = json_dict['material_name']
+        mof_open_status[struc] = 'No'
         if json_dict['metal_sites_found']:
             count_open += 1
+            mof_open_status[struc] = 'yes'
         metal_sites = json_dict['metal_sites']
 
         all_metals = [ms['metal'] for ms in metal_sites if ms['unique']]
@@ -280,6 +283,13 @@ def collect_statistics(json_dicts, analysis_folder):
 
     with open(analysis_folder+'/stats_less_d4.out', 'w') as fstats:
         print_stats(titles, printouts_less_d4, fstats)
+
+    csv_filename = analysis_folder + '/mof_list_oms_status.csv'
+    with open(csv_filename, 'w') as oms_status_csv:
+        writer = csv.writer(oms_status_csv)
+        writer.writerow(["MOF", "Has OMS"])
+        for key, value in mof_open_status.items():
+            writer.writerow([key, value])
 
 
 def print_stats(titles, printouts, fstats):
