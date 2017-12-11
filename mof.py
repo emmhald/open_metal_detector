@@ -20,12 +20,30 @@ class MofStructure(Structure):
         self.organic = None
         self.metal_coord_spheres = None
         self.all_coord_spheres = None
+        self.summary = dict()
+
+        self.summary['material_name'] = 'N/A'
+        self.summary['problematic'] = False
+        self.summary['max_surface_area_frac'] = 0.0
+        self.summary['metal_sites'] = []
+        self.summary['max_surface_area'] = 0.0
+        self.summary['uc_volume'] = self.volume
 
         self.tolerance = dict()
         self.tolerance['plane'] = 25  # 30 # 35
         self.tolerance['plane_5l'] = 25  # 30
         self.tolerance['tetrahedron'] = 10
         self.tolerance['plane_on_metal'] = 12.5
+
+    @classmethod
+    def from_file(cls, filename, primitive=False, sort=False, merge_tol=0.0):
+        s = super(Structure, cls).from_file(filename, primitive=primitive,
+                                            sort=sort, merge_tol=merge_tol)
+        s.summary['material_name'] = filename.split('/')[-1].split('.')[0]
+        return s
+
+    def set_name(self, name):
+        self.summary['material_name'] = name
 
     def split_structure_to_organic_and_metal(self):
         coords = self.frac_coords
@@ -150,27 +168,30 @@ class MofStructure(Structure):
                 return i
 
     def analyze_metals(self):
+        self.find_metal_coord_spheres()
         self.find_all_coord_sphere()
         oms_cs_list = []  # list of coordination sequences for each open metal found
         cms_cs_list = []  # list of coordination sequences for each closed metal found
         for m, omc in enumerate(self.metal_coord_spheres):
-            # site_dict is a dictionary holding all the information for a metal site
-            # is ubdated by check_if_open
-
             op, pr, site_dict = omc.check_if_open()
+            self.summary['metal_sites'].append(site_dict)
             m_index = self.match_index(omc)
             cs = self.find_coordination_sequence(m_index)
             if op:
+                self.summary['metal_sites_found'] = True
                 cs_list = oms_cs_list
             else:
                 cs_list = cms_cs_list
+            if pr:
+                self.summary['problematic'] = True
+
             m_id, new_site = self.find_metal_id(cs_list, cs)
-            print(m_index, m_id, new_site, cs)
             if new_site:
+                self.summary['metal_sites'][-1]['unique'] = "true"
                 print('New site found')
                 # site_dict["unique"] = True
                 cs_list.append(cs)
-
+        return self.summary
 
     def find_metal_id(self, cs_list, cs):
         """Check if a given site is unique based on its coordination sequence"""
@@ -291,6 +312,12 @@ class MetalSite(Structure):
                                         site_properties=site_properties)
         self._sites = list(self._sites)
 
+        self.site_summary = dict()
+        self.site_summary["type"] = "closed"
+        self.site_summary["is_open"] = False
+        self.site_summary["problematic"] = False
+        self.site_summary["metal"] = str(self.species[0])
+
         self.tolerance = dict()
         self.tolerance['plane'] = 25  # 30 # 35
         self.tolerance['plane_5l'] = 25  # 30
@@ -298,6 +325,7 @@ class MetalSite(Structure):
         self.tolerance['plane_on_metal'] = 12.5
 
     def check_if_open(self):
+        self.site_summary["number_of_linkers"] = self.num_sites - 1
         tolerance = self.tolerance
         site_dict = dict()
         tf = self.get_t_factor()
@@ -319,12 +347,17 @@ class MetalSite(Structure):
 
         if num_l < min_cordination:
             problematic = True
+            self.site_summary["problematic"] = True
 
         if num_l <= 3:  # min_cordination:
             open_metal_mof = True
             test['3_or_less'] = True
             min_dihid = 0.0
             all_dihidrals = 0.0
+            self.site_summary["is_open"] = True
+            self.site_summary["type"] = '3_or_less'
+            self.site_summary["min_dihedral"] = 0.0
+            self.site_summary["all_dihedrals"] = 0.0
         # return open_metal_mof, problematic, test, tf, 0.0, 0.0
         else:
             open_metal_mof, test, min_dihid, all_dihidrals = \
@@ -337,9 +370,30 @@ class MetalSite(Structure):
                                             tf,
                                             min_dihid,
                                             all_dihidrals)
-
+        self.check_dictionaries(site_dict)
         # return open_metal_mof, problematic, test, tf, min_dihid, all_dihidrals, site_dict
-        return open_metal_mof, problematic, site_dict
+        # return open_metal_mof, problematic, site_dict
+        return open_metal_mof, problematic, self.site_summary
+
+    def check_dictionaries(self, site_dict):
+        diff_keys = [self.site_summary[k] for k in set(self.site_summary) -
+                     set(site_dict)]
+        if len(diff_keys) > 0:
+            print('Dictionary are different', len(diff_keys))
+            return
+        check = True
+        for key in self.site_summary:
+            # print(key, self.site_summary[key] == site_dict[key], self.site_summary[key], site_dict[key])
+            if not self.site_summary[key] == site_dict[key]:
+                check = False
+        if not check:
+            print('Dictionary are different', check, len(diff_keys))
+            for key in self.site_summary:
+                print(key, self.site_summary[key] == site_dict[key], self.site_summary[key], site_dict[key])
+            input()
+        else:
+            print('Dictionary Check OKAY')
+
 
     def update_output_dict(self, site_dict, op, pr, t,
                             tf, min_dih, all_dih):
@@ -469,6 +523,15 @@ class MetalSite(Structure):
         if (num_l >= 4) and not open_metal_mof:
             open_metal_mof, test = self.check_metal_dihedrals(oms_test,
                                                               tolerance)
+        self.site_summary["is_open"] = open_metal_mof
+        self.site_summary["min_dihedral"] = min_dihedral
+        self.site_summary["all_dihedrals"] = all_dihedrals
+        for ti in oms_test:
+            if oms_test[ti]:
+                if self.site_summary["type"] == 'closed':
+                    self.site_summary["type"] = str(ti)
+                else:
+                    self.site_summary["type"] += ','+str(ti)
 
         return open_metal_mof, oms_test, min_dihedral, all_dihedrals
 
@@ -559,8 +622,7 @@ class MetalSite(Structure):
 
         return open_metal_mof, oms_test
 
-    @staticmethod
-    def obtain_metal_dihedrals(num, system):
+    def obtain_metal_dihedrals(self, num):
         all_dihedrals = []
         indeces = []
         indices_1 = range(1, num)
@@ -568,7 +630,7 @@ class MetalSite(Structure):
         for l in indices_1:
             for j, k in itertools.permutations(indices_1, 2):
                 if len({i, j, k, l}) == 4:
-                    dihedral = abs(system.get_dihedral(i, j, k, l))
+                    dihedral = abs(self.get_dihedral(i, j, k, l))
                     all_dihedrals.append(dihedral)
                     indeces.append([i, j, k, l])
 
