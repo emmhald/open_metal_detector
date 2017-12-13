@@ -1,9 +1,46 @@
-
+import json
+import copy
 from pymatgen import Structure
 from atomic_parameters import atoms as ap
 import numpy as np
 import sys
 import itertools
+import glob
+import os
+
+
+class MofCollection:
+
+    def __init__(self, collection_folder=""):
+        self.collection_folder = collection_folder
+        self.mof_coll = dict()
+        self.load_mofs()
+
+    def load_mofs(self):
+        for mof_file in glob.glob(self.collection_folder + "*.cif"):
+            mof = MofStructure.from_file(mof_file, primitive=False)
+            self.mof_coll[mof.name] = mof
+
+    def analyse_mofs(self, output_folder="output", overwrite=False):
+        Helper.make_folder(output_folder)
+
+        for mofname in self.mof_coll:
+            mof_folder = '/'.join([output_folder, mofname])
+            results_exist = self.check_if_results_exist(mof_folder, mofname)
+            if not overwrite and results_exist:
+                print("Skiping {}. Results already exist "
+                      "and overwrite is False.".format(mofname))
+                continue
+
+            mof = self.mof_coll[mofname]
+            mof.analyze_metals(output_folder=output_folder,
+                               output_level='debug')
+
+    def check_if_results_exist(self, mof_folder, mofname):
+        if os.path.isfile(mof_folder+'/'+mofname+'.json'):
+            if not os.path.isfile(mof_folder + '/' + 'analysis_running'):
+                return True
+        return False
 
 
 class MofStructure(Structure):
@@ -20,14 +57,16 @@ class MofStructure(Structure):
         self.organic = None
         self.metal_coord_spheres = None
         self.all_coord_spheres = None
-        self.summary = dict()
+        self.mof_name = "N/A"
 
-        self.summary['material_name'] = 'N/A'
+        self.summary = dict()
+        self.summary['material_name'] = self.mof_name
         self.summary['problematic'] = False
         self.summary['max_surface_area_frac'] = 0.0
         self.summary['metal_sites'] = []
         self.summary['max_surface_area'] = 0.0
         self.summary['uc_volume'] = self.volume
+        self.summary['open_metal_density'] = 0.0
 
         self.tolerance = dict()
         self.tolerance['plane'] = 25  # 30 # 35
@@ -35,11 +74,13 @@ class MofStructure(Structure):
         self.tolerance['tetrahedron'] = 10
         self.tolerance['plane_on_metal'] = 12.5
 
+
     @classmethod
     def from_file(cls, filename, primitive=False, sort=False, merge_tol=0.0):
         s = super(Structure, cls).from_file(filename, primitive=primitive,
                                             sort=sort, merge_tol=merge_tol)
-        s.summary['material_name'] = filename.split('/')[-1].split('.')[0]
+        s.mof_name = filename.split('/')[-1].split('.')[0]
+        s.summary['material_name'] = s.mof_name
         return s
 
     def set_name(self, name):
@@ -167,46 +208,51 @@ class MofStructure(Structure):
             if d < 0.001 and str(self.species[i]) == ele:
                 return i
 
-    def analyze_metals(self):
+    def analyze_metals(self, output_folder=None, output_level='normal'):
+        if output_folder is not None:
+            Helper.make_folder(output_folder)
+            running_ = output_folder + "/analysis_running"
+            open(running_, 'w').close()
+
+        self.split_structure_to_organic_and_metal()
         self.find_metal_coord_spheres()
         self.find_all_coord_sphere()
         oms_cs_list = []  # list of coordination sequences for each open metal found
         cms_cs_list = []  # list of coordination sequences for each closed metal found
         for m, omc in enumerate(self.metal_coord_spheres):
-            op, pr, site_dict = omc.check_if_open()
-            self.summary['metal_sites'].append(site_dict)
+            omc.check_if_open()
+            self.summary['metal_sites'].append(omc.site_summary)
             m_index = self.match_index(omc)
             cs = self.find_coordination_sequence(m_index)
-            if op:
-                self.summary['metal_sites_found'] = True
+            if omc.is_open:
                 cs_list = oms_cs_list
             else:
                 cs_list = cms_cs_list
-            if pr:
+            if omc.is_problematic:
                 self.summary['problematic'] = True
 
             m_id, new_site = self.find_metal_id(cs_list, cs)
             if new_site:
-                self.summary['metal_sites'][-1]['unique'] = "true"
+                self.summary['metal_sites'][-1]['unique'] = True
                 print('New site found')
-                # site_dict["unique"] = True
                 cs_list.append(cs)
+
+        open_sites = [s['is_open'] for s in self.summary['metal_sites']]
+        unique_sites = [1 for s in self.summary['metal_sites'] if s['unique']]
+
+        self.summary['open_metal_density'] = sum(unique_sites) / self.volume
+        self.summary['metal_sites_found'] = any(open_sites)
+        if output_folder is not None:
+            self.write_results(output_folder, output_level)
+            os.remove(running_)
         return self.summary
 
     def find_metal_id(self, cs_list, cs):
         """Check if a given site is unique based on its coordination sequence"""
         for i, cs_i in enumerate(cs_list):
-            if self.compare_lists(cs_i, cs):
+            if Helper.compare_lists(cs_i, cs):
                 return i, False
         return len(cs_list), True
-
-    def compare_lists(self, l1, l2):
-        if len(l1) != len(l2):
-            return False
-        for i, j in zip(l1, l2):
-            if i != j:
-                return False
-        return True
 
     def find_coordination_sequence(self, center):
         """computes the coordination sequence up to the Nth coordination shell
@@ -299,6 +345,25 @@ class MofStructure(Structure):
         # input()
         return cs
 
+    def write_results(self, output_folder, output_level):
+        Helper.make_folder(output_folder)
+        for index, mcs in enumerate(self.metal_coord_spheres):
+            mcs.write_xyz_file(output_folder, index)
+
+        output_fname = output_folder + '/' + self.mof_name + '_metal.cif'
+        self.metal.to(filename=output_fname)
+        output_fname = output_folder + '/' + self.mof_name + '_organic.cif'
+        self.organic.to(filename=output_fname)
+
+        json_file_out = output_folder + '/' + self.mof_name + '.json'
+        summary = copy.deepcopy(self.summary)
+        if output_level == 'normal':
+            for ms in summary["metal_sites"]:
+                ms.pop('all_dihedrals', None)
+                ms.pop('min_dihedral', None)
+        with open(json_file_out, 'w') as outfile:
+            json.dump(summary, outfile, indent=3)
+
 
 class MetalSite(Structure):
 
@@ -313,10 +378,11 @@ class MetalSite(Structure):
         self._sites = list(self._sites)
 
         self.site_summary = dict()
+        self.site_summary["metal"] = str(self.species[0])
         self.site_summary["type"] = "closed"
         self.site_summary["is_open"] = False
+        self.site_summary["unique"] = False
         self.site_summary["problematic"] = False
-        self.site_summary["metal"] = str(self.species[0])
 
         self.tolerance = dict()
         self.tolerance['plane'] = 25  # 30 # 35
@@ -324,104 +390,42 @@ class MetalSite(Structure):
         self.tolerance['tetrahedron'] = 10
         self.tolerance['plane_on_metal'] = 12.5
 
+        self.all_dihedrals = []
+        self.all_indeces = []
+        self.all_dihedrals_m = []
+        self.all_indeces_m = []
+        self.is_open = False
+        self.is_problematic = False
+
     def check_if_open(self):
         self.site_summary["number_of_linkers"] = self.num_sites - 1
-        tolerance = self.tolerance
-        site_dict = dict()
-        tf = self.get_t_factor()
+        self.get_t_factor()
 
-        problematic = False
-        test = dict()
-        test['plane'] = False
-        test['same_side'] = False
-        test['metal_plane'] = False
-        test['3_or_less'] = False
-        test['non_TD'] = False
-
-        open_metal_mof = False
-        num = self.num_sites
         num_l = self.num_sites - 1
-        min_cordination = 3
+        min_coordination = 3
         if ap.is_lanthanide_or_actinide(str(self.species[0])):
-            min_cordination = 5
+            min_coordination = 5
 
-        if num_l < min_cordination:
-            problematic = True
+        if num_l < min_coordination:
             self.site_summary["problematic"] = True
 
         if num_l <= 3:  # min_cordination:
-            open_metal_mof = True
-            test['3_or_less'] = True
-            min_dihid = 0.0
-            all_dihidrals = 0.0
             self.site_summary["is_open"] = True
             self.site_summary["type"] = '3_or_less'
             self.site_summary["min_dihedral"] = 0.0
             self.site_summary["all_dihedrals"] = 0.0
-        # return open_metal_mof, problematic, test, tf, 0.0, 0.0
         else:
-            open_metal_mof, test, min_dihid, all_dihidrals = \
-                self.check_non_metal_dihedrals(test, tolerance)
+            self.check_non_metal_dihedrals()
 
-        site_dict = self.update_output_dict(site_dict,
-                                            open_metal_mof,
-                                            problematic,
-                                            test,
-                                            tf,
-                                            min_dihid,
-                                            all_dihidrals)
-        self.check_dictionaries(site_dict)
-        # return open_metal_mof, problematic, test, tf, min_dihid, all_dihidrals, site_dict
-        # return open_metal_mof, problematic, site_dict
-        return open_metal_mof, problematic, self.site_summary
+        if self.site_summary['is_open']:
+            self.is_open = True
 
-    def check_dictionaries(self, site_dict):
-        diff_keys = [self.site_summary[k] for k in set(self.site_summary) -
-                     set(site_dict)]
-        if len(diff_keys) > 0:
-            print('Dictionary are different', len(diff_keys))
-            return
-        check = True
-        for key in self.site_summary:
-            # print(key, self.site_summary[key] == site_dict[key], self.site_summary[key], site_dict[key])
-            if not self.site_summary[key] == site_dict[key]:
-                check = False
-        if not check:
-            print('Dictionary are different', check, len(diff_keys))
-            for key in self.site_summary:
-                print(key, self.site_summary[key] == site_dict[key], self.site_summary[key], site_dict[key])
-            input()
-        else:
-            print('Dictionary Check OKAY')
-
-
-    def update_output_dict(self, site_dict, op, pr, t,
-                            tf, min_dih, all_dih):
-
-        spec = str(self.species[0])
-        open_metal_candidate_number = self.num_sites-1
-        site_dict["is_open"] = op
-        site_dict["t_factor"] = tf
-        site_dict["metal"] = spec
-        site_dict["type"] = 'closed'
-        site_dict["number_of_linkers"] = open_metal_candidate_number
-        site_dict["min_dihedral"] = min_dih
-        site_dict["all_dihedrals"] = all_dih
-        site_dict["unique"] = False
-        site_dict["problematic"] = pr
-        for ti in t:
-            if t[ti]:
-                if site_dict["type"] == 'closed':
-                    site_dict["type"] = str(ti)
-                else:
-                    site_dict["type"] = site_dict["type"]+','+str(ti)
-
-        return site_dict
+        if self.site_summary['problematic']:
+            self.is_problematic = True
 
     def get_t_factor(self):
 
-        num = self.num_sites
-        index_range = range(1, num)
+        index_range = range(1, self.num_sites)
         all_angles = []
         for i in itertools.combinations(index_range, 2):
             angle = self.get_angle(i[0], 0, i[1])
@@ -431,11 +435,11 @@ class MetalSite(Structure):
         # beta is the largest angle and alpha is the second largest angle
         # in the coordination sphere; using the same convention as Yang et al.
         # DOI: 10.1039/b617136b
-        if num > 3:
+        if self.num_sites > 3:
             beta = all_angles[-1][0]
             alpha = all_angles[-2][0]
 
-        if num - 1 == 6:
+        if self.num_sites - 1 == 6:
             max_indeces_all = all_angles[-1][1:3]
             l3_l4_angles = [x for x in all_angles if
                             x[1] not in max_indeces_all and
@@ -446,13 +450,13 @@ class MetalSite(Structure):
                             x[2] not in max_indeces_all_3_4]
             gamma = max(l5_l6_angles, key=lambda x: x[0])[0]
             tau = self.get_t6_factor(gamma)
-        elif num - 1 == 5:
+        elif self.num_sites - 1 == 5:
             tau = self.get_t5_factor(alpha, beta)
-        elif num - 1 == 4:
+        elif self.num_sites - 1 == 4:
             tau = self.get_t4_factor(alpha, beta)
         else:
             tau = -1
-        return tau
+        self.site_summary['t_factor'] = tau
 
     @staticmethod
     def get_t4_factor(a, b):
@@ -466,18 +470,26 @@ class MetalSite(Structure):
     def get_t6_factor(c):
         return c / 180
 
-    def check_non_metal_dihedrals(self, oms_test, tolerance):
-        num = self.num_sites
+    def check_non_metal_dihedrals(self):
+        #TODO revise this method. Simplify calculation and bookeeping
         num_l = self.num_sites - 1
         crit = dict()
         tol = dict()
+
+        oms_test = dict()
+        oms_test['plane'] = False
+        oms_test['same_side'] = False
+        oms_test['metal_plane'] = False
+        oms_test['3_or_less'] = False
+        oms_test['non_TD'] = False
+
         crit['plane'] = 180
-        tol['plane'] = tolerance['plane']  # 35
+        tol['plane'] = self.tolerance['plane']  # 35
         crit['plane_5l'] = 180
-        tol['plane_5l'] = tolerance['plane_5l']  # 30
+        tol['plane_5l'] = self.tolerance['plane_5l']  # 30
         crit['tetrahedron'] = 70.528779  # 70
-        tol['tetrahedron'] = tolerance['tetrahedron']  # 10
-        open_metal_mof = False
+        tol['tetrahedron'] = self.tolerance['tetrahedron']  # 10
+
         if num_l == 4:
             test_type = 'plane'  # 'tetrahedron'
             om_type = 'non_TD'
@@ -487,74 +499,52 @@ class MetalSite(Structure):
         elif num_l > 5:
             test_type = 'plane'
             om_type = 'same_side'
+        oms_type = ','.join([test_type, om_type])
 
-        all_dihedrals, all_indeces = self.obtain_dihedrals(num)
-        min_dihedral = min(all_dihedrals)
-        for dihedral, indeces in zip(all_dihedrals, all_indeces):
+        self.obtain_dihedrals()
+        self.site_summary["min_dihedral"] = min(self.all_dihedrals)
+        self.site_summary["all_dihedrals"] = self.all_dihedrals
+
+        for dihedral, indeces in zip(self.all_dihedrals, self.all_indeces):
             [i, j, k, l] = indeces
-            if num_l == -4:
-                if not (abs(dihedral - crit[test_type]) < tol[test_type]
-                        or abs(dihedral - crit[test_type] + 180) < tol[
-                        test_type]):
-                    oms_test.update(
-                        dict.fromkeys([om_type, test_type], True))
-                    open_metal_mof = True
-            else:
-                if abs(dihedral - crit[test_type]) < tol[test_type] \
-                        or abs(dihedral - crit[test_type] + 180) < tol[
-                            test_type]:
-                    if num_l <= 5:
-                        oms_test.update(
-                            dict.fromkeys([om_type, test_type], True))
-                        open_metal_mof = True
-                    elif num_l > 5:
-                        if self.check_if_plane_on_metal(0, [i, j, k, l],
-                                                        tolerance):
-                            other_indeces = self.find_other_indeces(
-                                [0, i, j, k, l],
-                                num)
-                            if self.check_if_atoms_on_same_site(other_indeces,
-                                                                j, k, l):
-                                oms_test.update(
-                                    dict.fromkeys([om_type, test_type],
-                                                  True))
-                                open_metal_mof = True
+            # if num_l == -4:
+            #     if not (abs(dihedral - crit[test_type]) < tol[test_type]
+            #             or abs(dihedral - crit[test_type] + 180) < tol[
+            #             test_type]):
+            #         self.site_summary["type"] = type
+            #         self.site_summary["is_open"] = True
+            # else:
+            test1 = abs(dihedral - crit[test_type])
+            test2 = abs(dihedral - crit[test_type] + 180)
+            if test1 < tol[test_type] or test2 < tol[test_type]:
+                if num_l <= 5:
+                    self.site_summary["type"] = oms_type
+                    self.site_summary["is_open"] = True
+                elif num_l > 5:
+                    if self.check_if_plane_on_metal(0, [i, j, k, l]):
+                        other_i = self.find_other_indeces([0, i, j, k, l])
+                        if self.check_if_atoms_on_same_side(other_i, j, k, l):
+                            self.site_summary["type"] = oms_type
+                            self.site_summary["is_open"] = True
 
-        if (num_l >= 4) and not open_metal_mof:
-            open_metal_mof, test = self.check_metal_dihedrals(oms_test,
-                                                              tolerance)
-        self.site_summary["is_open"] = open_metal_mof
-        self.site_summary["min_dihedral"] = min_dihedral
-        self.site_summary["all_dihedrals"] = all_dihedrals
-        for ti in oms_test:
-            if oms_test[ti]:
-                if self.site_summary["type"] == 'closed':
-                    self.site_summary["type"] = str(ti)
-                else:
-                    self.site_summary["type"] += ','+str(ti)
+        if (num_l >= 4) and not self.site_summary["is_open"]:
+            self.check_metal_dihedrals()
 
-        return open_metal_mof, oms_test, min_dihedral, all_dihedrals
-
-    def obtain_dihedrals(self, num):
-        all_dihedrals = []
-        indeces = []
-
-        indices_1 = range(1, num)
-        indices_2 = range(1, num)
+    def obtain_dihedrals(self):
+        indices_1 = range(1, self.num_sites)
+        indices_2 = range(1, self.num_sites)
         for i, l in itertools.combinations(indices_1, 2):
             for j, k in itertools.combinations(indices_2, 2):
                 if len({i, j, k, l}) == 4:
                     dihedral = abs(self.get_dihedral(i, j, k, l))
-                    all_dihedrals.append(dihedral)
-                    indeces.append([i, j, k, l])
+                    self.all_dihedrals.append(dihedral)
+                    self.all_indeces.append([i, j, k, l])
 
-        return all_dihedrals, indeces
-
-    def check_if_plane_on_metal(self, m_i, indeces, tolerance):
+    def check_if_plane_on_metal(self, m_i, indeces):
         crit = 180
-        # Set to 12.5 so that ferocene type coordination spheres are dected
+        # Set to 12.5 so that ferocene type coordination spheres are detected
         # correctly. eg. BUCROH
-        tol = tolerance['plane_on_metal']  # 12.5
+        tol = self.tolerance['plane_on_metal']  # 12.5
         # tol = 25.0
         for i in range(1, len(indeces)):
             for j in range(1, len(indeces)):
@@ -563,75 +553,90 @@ class MetalSite(Structure):
                         pass
                     else:
                         dihedral = abs(self.get_dihedral(m_i, indeces[i],
-                                                           indeces[j],
-                                                           indeces[k]))
+                                                         indeces[j],
+                                                         indeces[k]))
                         if abs(dihedral - crit) < tol or abs(
                                                 dihedral - crit + 180) < tol:
                             return True
         return False
 
-    def find_other_indeces(self, indeces, num):
+    def find_other_indeces(self, indeces):
         other_indeces = []
-        for index in range(0, num):
+        for index in range(0, self.num_sites):
             if index not in indeces:
                 other_indeces.append(index)
         return other_indeces
 
-    def check_if_atoms_on_same_site(self, other_indeces, j, k, l):
+    def check_if_atoms_on_same_side(self, other_indeces, j, k, l):
         dihedrals_other = []
         for o_i in other_indeces:
             dihedrals_other.append(self.get_dihedral(j, k, l, o_i))
-        if not (self.check_positive(dihedrals_other) and
-                self.check_negative(dihedrals_other)):
+        dihedrals_p = [d > 0.0 for d in dihedrals_other]
+        dihedrals_n = [d < 0.0 for d in dihedrals_other]
+        if all(dihedrals_p) or all(dihedrals_n):
             return True
+        # if not (self.check_positive(dihedrals_other) and
+        #         self.check_negative(dihedrals_other)):
+            # return True
         return False
 
-    @staticmethod
-    def check_positive(n_list):
-        for n in n_list:
-            if n > 0:
-                return True
+    # @staticmethod
+    # def check_positive(n_list):
+    #     return any([n > 0 for n in n_list])
+        # for n in n_list:
+        #     if n > 0:
+        #         return True
 
-    @staticmethod
-    def check_negative(n_list):
-        for n in n_list:
-            if n < 0:
-                return True
+    # @staticmethod
+    # def check_negative(n_list):
+    #     return any([n < 0 for n in n_list])
+        # for n in n_list:
+        #     if n < 0:
+        #         return True
 
-    def check_metal_dihedrals(self, oms_test, tolerance):
-        num = self.num_sites
-        open_metal_mof = False
-        crit = dict()
-        tol = dict()
-        crit['plane'] = 180
-        tol['plane'] = tolerance['plane']  # 30
-
-        all_dihedrals, all_indices = self.obtain_metal_dihedrals(num)
+    def check_metal_dihedrals(self):
+        crit = 180
+        tol = self.tolerance['plane']  # 30
+        oms_type = ','.join([str(self.species[0]), 'metal_plane'])
+        oms_test = dict()
+        self.obtain_metal_dihedrals()
         number_of_planes = 0
-        for dihedral, indices in zip(all_dihedrals, all_indices):
+        for dihedral, indices in zip(self.all_dihedrals_m, self.all_indeces_m):
             [i, j, k, l] = indices
-            if abs(dihedral - crit['plane']) < tol['plane'] \
-                    or abs(dihedral - crit['plane'] + 180) < tol[
-                        'plane']:
+            if abs(dihedral - crit) < tol or abs(dihedral - crit + 180) < tol:
                 number_of_planes += 1
-                all_indices = self.find_other_indeces([0, j, k, l], num)
-                if self.check_if_atoms_on_same_site(all_indices, j, k, l):
-                    open_metal_mof = True
-                    oms_test[self[0], 'metal_plane'] = True
-                    return open_metal_mof, oms_test
+                all_indices = self.find_other_indeces([0, j, k, l])
+                if self.check_if_atoms_on_same_side(all_indices, j, k, l):
+                    self.site_summary["type"] = oms_type
+                    self.site_summary["is_open"] = True
 
-        return open_metal_mof, oms_test
-
-    def obtain_metal_dihedrals(self, num):
-        all_dihedrals = []
-        indeces = []
-        indices_1 = range(1, num)
+    def obtain_metal_dihedrals(self):
+        indices_1 = range(1, self.num_sites)
         i = 0
         for l in indices_1:
             for j, k in itertools.permutations(indices_1, 2):
                 if len({i, j, k, l}) == 4:
                     dihedral = abs(self.get_dihedral(i, j, k, l))
-                    all_dihedrals.append(dihedral)
-                    indeces.append([i, j, k, l])
+                    self.all_dihedrals_m.append(dihedral)
+                    self.all_indeces_m.append([i, j, k, l])
 
-        return all_dihedrals, indeces
+    def write_xyz_file(self, output_folder, index):
+        import pymatgen.io.xyz as xyzio
+        Helper.make_folder(output_folder)
+        output_fname = output_folder
+        output_fname += '/first_coordination_sphere'+str(index)+'.cif'
+        self.to(filename=output_fname)
+
+
+class Helper:
+
+    @classmethod
+    def make_folder(cls, output_folder):
+        if not os.path.exists(output_folder):
+            os.makedirs(output_folder)
+
+    @classmethod
+    def compare_lists(cls, l1, l2):
+        if len(l1) != len(l2):
+            return False
+        return all([i == j for i, j in zip(l1, l2)])
