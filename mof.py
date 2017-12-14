@@ -1,3 +1,4 @@
+
 import json
 import copy
 from pymatgen import Structure
@@ -7,40 +8,148 @@ import sys
 import itertools
 import glob
 import os
+import pickle
+from multiprocessing import Process,cpu_count
+import time
+import warnings
 
 
 class MofCollection:
 
-    def __init__(self, collection_folder=""):
+    def __init__(self, collection_folder=".", output_folder=".", max_size=None):
+
         self.collection_folder = collection_folder
-        self.mof_coll = dict()
+        self.output_folder = output_folder
+        self.load_balance_filename = output_folder+'/load_balance_info'
+        self.mof_coll = []
+        self.batches = []
+        self.max_size = max_size
+        self.load_balance_index = {}
         self.load_mofs()
 
-    def load_mofs(self):
-        for mof_file in glob.glob(self.collection_folder + "*.cif"):
-            mof = MofStructure.from_file(mof_file, primitive=False)
-            self.mof_coll[mof.name] = mof
-
-    def analyse_mofs(self, output_folder="output", overwrite=False):
         Helper.make_folder(output_folder)
 
-        for mofname in self.mof_coll:
-            mof_folder = '/'.join([output_folder, mofname])
-            results_exist = self.check_if_results_exist(mof_folder, mofname)
-            if not overwrite and results_exist:
-                print("Skiping {}. Results already exist "
-                      "and overwrite is False.".format(mofname))
-                continue
+    def load_mofs(self):
+        for mof_file in glob.glob(self.collection_folder+"*.cif"):
+            mof_name = mof_file.split('/')[-1].split('.')[0]
+            mof_info = {"mof_name": mof_name, "mof_file": mof_file}
+            self.mof_coll.append(mof_info)
 
-            mof = self.mof_coll[mofname]
-            mof.analyze_metals(output_folder=output_folder,
-                               output_level='debug')
+    def analyse_mofs(self, overwrite=False, num_batches=1):
+        t0 = time.time()
+
+        if not self.batches:
+            self.make_batches(num_batches)
+
+        processes = []
+        for i, batch in enumerate(self.batches):
+            p = Process(target=self.run_batch, args=(i, batch, overwrite,))
+            p.start()
+            processes.append(p)
+
+        for p in processes:
+            p.join()
+
+        t1 = time.time()
+        print('\nAnalysis Finished. Time required:', t1-t0)
+
+    def run_batch(self, b, batch, overwrite):
+
+        for i, mi in enumerate(batch):
+            print('Batch {} MOF {} {}'.format(b + 1, i + 1, mi['mof_name']))
+            self.analyse(mi, overwrite)
+
+        print('FINISHED Batch {}.'.format(b + 1))
+
+    def analyse(self, mi, overwrite):
+
+        mof = MofStructure.from_file(mi['mof_file'], primitive=False)
+        mof_folder = '/'.join([self.output_folder, mi['mof_name']])
+        results_exist = self.check_if_results_exist(mof_folder, mi['mof_name'])
+
+        if not overwrite and results_exist:
+            print("Skiping {}. Results already exist and overwrite is set "
+                  "to False.".format(mi['mof_name']))
+            return
+
+        mof.analyze_metals(output_folder=mof_folder, output_level='debug')
 
     def check_if_results_exist(self, mof_folder, mofname):
+
         if os.path.isfile(mof_folder+'/'+mofname+'.json'):
             if not os.path.isfile(mof_folder + '/' + 'analysis_running'):
                 return True
+
         return False
+
+    def make_batches(self, num_batches=3, redo_balance=False):
+
+        if cpu_count() < num_batches:
+            warnings.warn('You requested {} batches but there are only'
+                          '{} CPUs available.'.format(num_batches, cpu_count()))
+
+        self.validate_load_balance_info(redo_balance)
+
+        self.batches = [[] for b in range(0, num_batches)]
+        # Sort mof list using the load balancing index
+        self.mof_coll.sort(key=lambda x: self.load_balance_index[x['mof_name']])
+        # Select only up to max_size to work with
+        self.mof_coll = self.mof_coll[0:self.max_size]
+        sum_load_balance = sum(self.load_balance_index[mi["mof_name"]]
+                               for mi in self.mof_coll)
+        lb_per_batch = sum_load_balance / num_batches
+
+        sum_lb = 0.0
+        batch = 0
+        for mi in self.mof_coll:
+            lb = self.load_balance_index[mi["mof_name"]]
+            sum_lb += lb
+            self.batches[batch].append(mi)
+            batch = int(sum_lb / lb_per_batch)
+
+        for i, batch in enumerate(self.batches):
+            print("Batch {0} has {1} MOFs".format(i+1, len(batch)))
+        print("\n")
+
+    def validate_load_balance_info(self, redo_balance=False):
+
+        if os.path.isfile(self.load_balance_filename) and not redo_balance:
+            with open(self.load_balance_filename, 'rb') as load_balance_file:
+                self.load_balance_index = pickle.load(load_balance_file)
+        else:
+            if redo_balance:
+                print('\nRecomputing Load Balancing Info.')
+            else:
+                print('\nLoading Load Balancing Info not found.')
+            print('This might a while but needs to be done once.')
+            print('Computing now...')
+            self.compute_load_balance_index()
+            print('Done\n')
+
+        print('Validating Load Balancing Info...')
+        for mi in self.mof_coll:
+            if mi['mof_name'] not in self.load_balance_index:
+                print("Load Balance Info is missing computing "
+                      "now for {:40}".format(mi['mof_name']), end="\r")
+                self.compute_load_balance_info(mi)
+
+        with open(self.load_balance_filename, 'wb') as load_balance_file:
+            pickle.dump(self.load_balance_index, load_balance_file)
+
+        print('Done\n')
+
+    def compute_load_balance_index(self):
+
+        mof_files_n_100 = len(self.mof_coll) / 100
+        for i, mi in enumerate(self.mof_coll):
+            self.compute_load_balance_info(mi)
+            print("{:5.2f}%".format(i/mof_files_n_100), end="\r")
+        print("\n")
+
+    def compute_load_balance_info(self, mi):
+
+        mof = MofStructure.from_file(mi['mof_file'], primitive=False)
+        self.load_balance_index[mi['mof_name']] = len(mof)*len(mof)
 
 
 class MofStructure(Structure):
@@ -57,10 +166,10 @@ class MofStructure(Structure):
         self.organic = None
         self.metal_coord_spheres = None
         self.all_coord_spheres = None
-        self.mof_name = "N/A"
+        self.name = "N/A"
 
         self.summary = dict()
-        self.summary['material_name'] = self.mof_name
+        self.summary['material_name'] = self.name
         self.summary['problematic'] = False
         self.summary['max_surface_area_frac'] = 0.0
         self.summary['metal_sites'] = []
@@ -79,8 +188,8 @@ class MofStructure(Structure):
     def from_file(cls, filename, primitive=False, sort=False, merge_tol=0.0):
         s = super(Structure, cls).from_file(filename, primitive=primitive,
                                             sort=sort, merge_tol=merge_tol)
-        s.mof_name = filename.split('/')[-1].split('.')[0]
-        s.summary['material_name'] = s.mof_name
+        s.name = filename.split('/')[-1].split('.')[0]
+        s.summary['material_name'] = s.name
         return s
 
     def set_name(self, name):
@@ -234,7 +343,6 @@ class MofStructure(Structure):
             m_id, new_site = self.find_metal_id(cs_list, cs)
             if new_site:
                 self.summary['metal_sites'][-1]['unique'] = True
-                print('New site found')
                 cs_list.append(cs)
 
         open_sites = [s['is_open'] for s in self.summary['metal_sites']]
@@ -350,12 +458,12 @@ class MofStructure(Structure):
         for index, mcs in enumerate(self.metal_coord_spheres):
             mcs.write_xyz_file(output_folder, index)
 
-        output_fname = output_folder + '/' + self.mof_name + '_metal.cif'
+        output_fname = output_folder + '/' + self.name + '_metal.cif'
         self.metal.to(filename=output_fname)
-        output_fname = output_folder + '/' + self.mof_name + '_organic.cif'
+        output_fname = output_folder + '/' + self.name + '_organic.cif'
         self.organic.to(filename=output_fname)
 
-        json_file_out = output_folder + '/' + self.mof_name + '.json'
+        json_file_out = output_folder + '/' + self.name + '.json'
         summary = copy.deepcopy(self.summary)
         if output_level == 'normal':
             for ms in summary["metal_sites"]:
