@@ -95,30 +95,7 @@ class MofCollection:
 
         return False
 
-    def check_analysis_status(self):
-        # mof_folders = [f.path for f in os.scandir(self.output_folder) if f.is_dir()]
-        done = 0
-        not_done = []
-        # for mf in mof_folders:
-        for mi in self.mof_coll:
-            mf = '/'.join([self.output_folder, mi['mof_name']])
-            if self.check_if_results_exist(mf):
-                done += 1
-            else:
-                not_done.append(mf)
-        if done > 0:
-            print('\nAnalysis for {} out of {} structures have been completed.'
-                  .format(done, len(self.mof_coll)))
-        else:
-            print('\nAnalysis for no structures has been completed.'
-                  .format(done, len(self.mof_coll)))
-        if done != len(self.mof_coll):
-            print('The following structures are missing.')
-            for nd in not_done:
-                print(nd)
-
     def make_batches(self, num_batches=3, redo_balance=False):
-
         if cpu_count() < num_batches:
             warnings.warn('You requested {} batches but there are only'
                           '{} CPUs available.'.format(num_batches, cpu_count()))
@@ -147,7 +124,6 @@ class MofCollection:
         print("\n")
 
     def validate_load_balance_info(self, redo_balance=False):
-
         if os.path.isfile(self.load_balance_filename) and not redo_balance:
             with open(self.load_balance_filename, 'rb') as load_balance_file:
                 self.load_balance_index = pickle.load(load_balance_file)
@@ -174,7 +150,6 @@ class MofCollection:
         print('Done\n')
 
     def compute_load_balance_index(self):
-
         mof_files_n_100 = len(self.mof_coll) / 100
         for i, mi in enumerate(self.mof_coll):
             self.compute_load_balance_info(mi)
@@ -182,6 +157,27 @@ class MofCollection:
         print("\n")
 
     def compute_load_balance_info(self, mi):
-
         mof = MofStructure.from_file(mi['mof_file'], primitive=False)
         self.load_balance_index[mi['mof_name']] = len(mof)  #*len(mof)
+
+    def check_analysis_status(self):
+        # mof_folders = [f.path for f in os.scandir(self.output_folder) if f.is_dir()]
+        done = 0
+        not_done = []
+        # for mf in mof_folders:
+        for mi in self.mof_coll:
+            mf = '/'.join([self.output_folder, mi['mof_name']])
+            if self.check_if_results_exist(mf):
+                done += 1
+            else:
+                not_done.append(mf)
+        if done > 0:
+            print('\nAnalysis for {} out of {} structures have been completed.'
+                  .format(done, len(self.mof_coll)))
+        else:
+            print('\nAnalysis for no structures has been completed.'
+                  .format(done, len(self.mof_coll)))
+        if done != len(self.mof_coll):
+            print('The following structures are missing.')
+            for nd in not_done:
+                print(nd)
