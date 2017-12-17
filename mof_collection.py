@@ -272,63 +272,6 @@ class MofCollection:
             for e, h in zip(edges, hist):
                 print(e + w, h, file=hist_file)
 
-    def summarize_tfactors_(self):
-        """Read all the tfactors for all the open metal sites found in all the
-        mofs in the json files (json_dicts) write them into files for each type
-        yes_t4, no_t4, yes_t5 etc. where yes means the site has been found open.
-        In addition, make histograms using this data."""
-        tfac_analysis_folder = self.analysis_folder+'/tfac_analysis'
-        Helper.make_folder(self.analysis_folder)
-        Helper.make_folder(tfac_analysis_folder)
-
-        # r = re.compile("([a-zA-Z]+)(-?(?:\d+())?(?:\.\d*())?(?:e-?\d+())?(?:\©|\1\3))")
-
-        for yn, nl in itertools.product(['yes', 'no'], [4, 5, 6]):
-            outfilename = yn + '_' + str(nl) + '.out'
-            outpath = tfac_analysis_folder + '/' + outfilename
-            open(outpath, 'w').close()
-        yes_or_no = {True: 'yes', False: 'no'}
-
-        for json_dict in self.json_dicts:
-            struc = json_dict['material_name']
-            metal_sites = json_dict['metal_sites']
-            for ms in metal_sites:
-                nl = ms["number_of_linkers"]
-                if 7 > int(nl) > 3 and ms['unique']:  #
-                    outfilename = yes_or_no[ms["is_open"]]+'_'+str(nl) + '.out'
-                    outpath = tfac_analysis_folder + '/' + outfilename
-                    with open(outpath, 'a') as outfile:
-                        print(struc, yes_or_no[ms["is_open"]], ms["t_factor"],
-                              file=outfile)
-
-        for yn in ['yes', 'no']:
-            for i in range(4, 7):
-                filename = yn+'_'+str(i)
-                outpath = tfac_analysis_folder + '/' + filename + '.out'
-                with open(outpath, 'r') as datafile:
-                    tfac_list = []
-                    for l in datafile:
-                        tfac = l.split(' ')[2].rstrip('\n')
-                        tfac_list.append(float(tfac))
-
-                if len(tfac_list) > 0:
-                    hist, edges = np.histogram(tfac_list, bins=50, range=(0, 1),
-                                               density=True)
-                    fhist = tfac_analysis_folder+'/'+filename+'_hist.out'
-                    with open(fhist, 'w') as hist_file:
-                        w = (edges[1]-edges[0])/2
-                        for e, h in zip(edges, hist):
-                            print(e+w, h, file=hist_file)
-
-                    hist, edges = np.histogram(tfac_list, bins=50, range=(0, 1),
-                                               density=False)
-
-                    fhist = tfac_analysis_folder+'/'+filename+'_hist_abs.out'
-                    with open(fhist, 'w') as hist_file:
-                        w = (edges[1]-edges[0])/2
-                        for e, h in zip(edges, hist):
-                            print(e+w, h, file=hist_file)
-
     def collect_statistics(self, max_atomic_number=54):
         self.site_info = {}
         for json_dict in self.json_dicts:
@@ -343,9 +286,7 @@ class MofCollection:
                     del self.site_info[key]['min_dihedral']
                 self.site_info[key]['mof_name'] = mof_name
         self.make_df()
-        site_df = (self.site_df.loc[self.site_df['metal']
-                   .apply(ap.check_atomic_number, args=(max_atomic_number,))])
-        site_df_u = site_df.loc[site_df['unique']]
+        site_df_u = self.site_df.loc[self.site_df['unique']]
         site_df_o = site_df_u.loc[site_df_u['is_open']]
 
         all_sites = self.group_and_summarize(site_df_u, ['All-MOFs',
@@ -364,7 +305,15 @@ class MofCollection:
         s_df['Per.-Open-Site'] = s_df['Per.-Open-Site'].apply('{:.2f} %'.format)
         s_df.sort_values("All-MOFs", inplace=True, ascending=False)
         s_df.to_csv(self.analysis_folder+'/stats.out', sep=' ')
-        print(s_df)
+
+        #Collect statistics for only up to max_atomic_number
+        subset = pd.Series(s_df.index).apply(ap.check_atomic_number,
+                                             args=(max_atomic_number,))
+        site_df_subset = s_df.loc[subset.values]
+        fname = "{0}/stats_less_{1}.out".format(self.analysis_folder,
+                                              max_atomic_number)
+        site_df_subset.to_csv(fname, sep=' ')
+        print(site_df_subset)
 
     def group_and_summarize(self, df, names=None):
         rename = {"mof_name": names[0], "is_open": names[1]}
