@@ -303,7 +303,11 @@ class atoms:
 
     @classmethod
     def is_d4_or_less(cls, ele):
-        if cls.atomic_number[ele] < 54:
+        return cls.check_atomic_number(cls, ele, 54)
+
+    @classmethod
+    def check_atomic_number(cls, ele, max_atomic_number):
+        if cls.atomic_number[ele] < max_atomic_number:
             return True
         else:
             return False
@@ -391,8 +395,10 @@ class atoms:
         return cls.get_covelent_radius(ele1) + cls.get_covelent_radius(ele2)
 
     @classmethod
-    def bond_check(cls, ele1, ele2, dist, bond_tol):
+    def bond_check(cls, ele1, ele2, dist, bond_tol=None):
         #bond = dist #- get_sum_of_cov_radii(ele1,ele2)
+        if bond_tol is None:
+            bond_tol = cls.get_bond_tolerance(ele1, ele2)
         up_bound = cls.get_sum_of_cov_radii(ele1, ele2) + bond_tol
         low_bound = cls.get_sum_of_cov_radii(ele1, ele2) - bond_tol
         #if bond < bond_tol and abs(dist) > 0:
@@ -410,6 +416,4 @@ class atoms:
         """
         max_co = max([cls.co[k] for k in cls.co])*1.1
         return max_co*2.0 + 0.4
-
-
 
