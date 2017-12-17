@@ -49,7 +49,7 @@ class MofStructure(Structure):
     def from_file(cls, filename, primitive=False, sort=False, merge_tol=0.0):
         s = super(Structure, cls).from_file(filename, primitive=primitive,
                                             sort=sort, merge_tol=merge_tol)
-        s.name = filename.split('/')[-1].split('.')[0]
+        s.name = os.path.splitext(os.path.basename(filename))[0]
         s.summary['material_name'] = s.name
         s.species_str = [str(s) for s in s.species]
         return s
@@ -240,7 +240,8 @@ class MofStructure(Structure):
             mcs.write_xyz_file(output_folder, index)
 
         output_fname = output_folder + '/' + self.name + '_metal.cif'
-        self.metal.to(filename=output_fname)
+        if self.metal:
+            self.metal.to(filename=output_fname)
         output_fname = output_folder + '/' + self.name + '_organic.cif'
         self.organic.to(filename=output_fname)
 
