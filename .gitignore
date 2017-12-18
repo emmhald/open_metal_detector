@@ -3,7 +3,5 @@ __pycache__/*
 __pycache__
 output*
 analysis
-*.cif
 *.out
 .idea/
-itertools

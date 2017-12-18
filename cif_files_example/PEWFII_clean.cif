@@ -1,0 +1,46 @@
+data_PEWFII_clean
+_audit_creation_date              2014-07-02
+_audit_creation_method            'Materials Studio'
+_symmetry_space_group_name_H-M    'P1'
+_symmetry_Int_Tables_number       1
+_symmetry_cell_setting            triclinic
+loop_
+_symmetry_equiv_pos_as_xyz
+  x,y,z
+_cell_length_a                    7.1070
+_cell_length_b                    7.2234
+_cell_length_c                    9.2050
+_cell_angle_alpha                 95.3770
+_cell_angle_beta                  91.2560
+_cell_angle_gamma                 114.8930
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+_atom_site_U_iso_or_equiv
+_atom_site_adp_type
+_atom_site_occupancy
+U1     U     0.50000   0.50000   0.50000   0.01267  Uiso   1.00
+Cu1    Cu    0.00000   0.00000   0.50000   0.01267  Uiso   1.00
+H1     H     0.28860   0.43140   0.97320   0.01267  Uiso   1.00
+H2     H     0.71140   0.56860   0.02680   0.01267  Uiso   1.00
+C1     C     0.04140   0.43280   0.86239   0.01267  Uiso   1.00
+C2     C     0.09380   0.35510   0.71816   0.01267  Uiso   1.00
+C3     C     0.86780   0.47530   0.87764   0.01267  Uiso   1.00
+C4     C     0.17250   0.45850   0.98397   0.01267  Uiso   1.00
+C5     C     0.72990   0.46090   0.74862   0.01267  Uiso   1.00
+C6     C     0.95860   0.56720   0.13761   0.01267  Uiso   1.00
+C7     C     0.90620   0.64490   0.28184   0.01267  Uiso   1.00
+C8     C     0.13220   0.52470   0.12236   0.01267  Uiso   1.00
+C9     C     0.82750   0.54150   0.01603   0.01267  Uiso   1.00
+C10    C     0.27010   0.53910   0.25138   0.01267  Uiso   1.00
+O1     O     0.22210   0.48518   0.64632   0.01267  Uiso   1.00
+O2     O     0.76030   0.40070   0.62212   0.01267  Uiso   1.00
+O3     O     0.01020   0.16313   0.68625   0.01267  Uiso   1.00
+O4     O     0.58430   0.51730   0.76575   0.01267  Uiso   1.00
+O5     O     0.77790   0.51482   0.35368   0.01267  Uiso   1.00
+O6     O     0.23970   0.59930   0.37788   0.01267  Uiso   1.00
+O7     O     0.98980   0.83687   0.31375   0.01267  Uiso   1.00
+O8     O     0.41570   0.48270   0.23425   0.01267  Uiso   1.00

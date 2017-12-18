@@ -1,0 +1,42 @@
+data_MOCHIW_clean
+_audit_creation_date              2014-07-02
+_audit_creation_method            'Materials Studio'
+_symmetry_space_group_name_H-M    'P1'
+_symmetry_Int_Tables_number       1
+_symmetry_cell_setting            triclinic
+loop_
+_symmetry_equiv_pos_as_xyz
+  x,y,z
+_cell_length_a                    6.6544
+_cell_length_b                    7.0380
+_cell_length_c                    7.7938
+_cell_angle_alpha                 111.1600
+_cell_angle_beta                  95.3070
+_cell_angle_gamma                 90.5900
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+_atom_site_U_iso_or_equiv
+_atom_site_adp_type
+_atom_site_occupancy
+Nd1    Nd    0.86983   0.77765   0.06652   0.01267  Uiso   1.00
+Nd2    Nd    0.13017   0.22235   0.93348   0.01267  Uiso   1.00
+P1     P     0.32593   0.74790   0.97919   0.01267  Uiso   1.00
+P2     P     0.67407   0.25210   0.02081   0.01267  Uiso   1.00
+H1     H     0.36220   0.72040   0.79780   0.01267  Uiso   1.00
+H2     H     0.63780   0.27960   0.20220   0.01267  Uiso   1.00
+C1     C     0.06200   0.90790   0.50010   0.01267  Uiso   1.00
+C2     C     0.93800   0.09210   0.49990   0.01267  Uiso   1.00
+O1     O     0.19920   0.93900   0.03470   0.01267  Uiso   1.00
+O2     O     0.52170   0.77240   0.10200   0.01267  Uiso   1.00
+O3     O     0.18150   0.57310   0.97290   0.01267  Uiso   1.00
+O4     O     0.05280   0.75910   0.35110   0.01267  Uiso   1.00
+O5     O     0.84100   0.07780   0.35050   0.01267  Uiso   1.00
+O6     O     0.80080   0.06100   0.96530   0.01267  Uiso   1.00
+O7     O     0.47830   0.22760   0.89800   0.01267  Uiso   1.00
+O8     O     0.81850   0.42690   0.02710   0.01267  Uiso   1.00
+O9     O     0.94720   0.24090   0.64890   0.01267  Uiso   1.00
+O10    O     0.15900   0.92220   0.64950   0.01267  Uiso   1.00
