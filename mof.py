@@ -11,10 +11,11 @@ import os
 
 class MofStructure(Structure):
 
-    def __init__(self, lattice, species, coords, validate_proximity=False,
+    def __init__(self, lattice, species, coords, charge=None, validate_proximity=False,
                  to_unit_cell=False, coords_are_cartesian=False,
                  site_properties=None):
         super(Structure, self).__init__(lattice, species, coords,
+                                        charge=None,
                                         validate_proximity=validate_proximity,
                                         to_unit_cell=to_unit_cell,
                                         coords_are_cartesian=coords_are_cartesian,

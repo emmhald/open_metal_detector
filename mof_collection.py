@@ -216,17 +216,17 @@ class MofCollection:
     def load_results(self):
         """Loop over all json files in output_folder and return
         a list of dictionaries for each json file"""
-        print('Reading structures...', end=' ')
+        print('Reading results...')
         self.json_dicts = []
         for mi in self.mof_coll:
             mof_name = mi["mof_name"]
             json_file = "{0}/{1}/{1}.json".format(self.output_folder, mof_name)
-            # json_file = self.output_folder+'/'+mof_name+'/'+mof_name + '.json'
             if os.path.isfile(json_file):
                 json_dict = json.load(open(json_file))
             if isinstance(json_dict, dict):
                 json_dict['source_name'] = self.output_folder+'/'+mof_name
                 self.json_dicts.append(json_dict)
+        print('Read results from {} structures.'.format(len(self.json_dicts)))
         print('Done.')
 
     def summarize_tfactors(self):
