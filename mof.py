@@ -7,6 +7,7 @@ import numpy as np
 import sys
 import itertools
 import os
+import shutil
 
 
 class MofStructure(Structure):
@@ -15,7 +16,7 @@ class MofStructure(Structure):
                  to_unit_cell=False, coords_are_cartesian=False,
                  site_properties=None):
         super(Structure, self).__init__(lattice, species, coords,
-                                        charge=None,
+                                        charge=charge,
                                         validate_proximity=validate_proximity,
                                         to_unit_cell=to_unit_cell,
                                         coords_are_cartesian=coords_are_cartesian,
@@ -25,6 +26,7 @@ class MofStructure(Structure):
         self.metal_coord_spheres = None
         self.all_coord_spheres_indices = None
         self.name = "N/A"
+        self.species_str = [str(s) for s in self.species]
 
         self.summary = dict()
         self.summary['material_name'] = self.name
@@ -34,13 +36,16 @@ class MofStructure(Structure):
         self.summary['max_surface_area'] = 0.0
         self.summary['uc_volume'] = self.volume
         self.summary['open_metal_density'] = 0.0
+        #We need to set to have only one of each metal atom, and then convert to
+        #a list to store as JSON (JSON does not support sets)
+        metal_set = set([s for s in self.species_str if ap.check_if_metal(s)])
+        self.summary['metals'] = list(metal_set)
 
         self.tolerance = dict()
         self.tolerance['plane'] = 25  # 30 # 35
         self.tolerance['plane_5l'] = 25  # 30
         self.tolerance['tetrahedron'] = 10
         self.tolerance['plane_on_metal'] = 12.5
-        self.species_str = [str(s) for s in self.species]
 
         self.metal_indexes = []
         self.all_distances = None
@@ -48,12 +53,12 @@ class MofStructure(Structure):
 
     @classmethod
     def from_file(cls, filename, primitive=False, sort=False, merge_tol=0.0):
-        s = super(Structure, cls).from_file(filename, primitive=primitive,
-                                            sort=sort, merge_tol=merge_tol)
-        s.name = os.path.splitext(os.path.basename(filename))[0]
-        s.summary['material_name'] = s.name
-        s.species_str = [str(s) for s in s.species]
-        return s
+        s = Structure.from_file(filename, primitive=primitive, sort=sort,
+                                merge_tol=merge_tol)
+        s_mof = cls(s.lattice, s.species, s.frac_coords)
+        s_mof.name = os.path.splitext(os.path.basename(filename))[0]
+        s_mof.summary['material_name'] = s_mof.name
+        return s_mof
 
     def set_name(self, name):
         self.summary['material_name'] = name
@@ -507,3 +512,12 @@ class Helper:
         if len(l1) != len(l2):
             return False
         return all([i == j for i, j in zip(l1, l2)])
+
+    @classmethod
+    def copy_folder(cls, dest, src):
+        if not os.path.exists(dest):
+            os.makedirs(dest)
+        s = src.split('/')[-1]
+        d = os.path.join(dest, s)
+        if not os.path.exists(d):
+            shutil.copytree(src, d)
