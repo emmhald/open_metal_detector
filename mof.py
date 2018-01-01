@@ -8,13 +8,15 @@ import sys
 import itertools
 import os
 import shutil
+import hashlib
+import datetime
 
 
 class MofStructure(Structure):
 
     def __init__(self, lattice, species, coords, charge=None, validate_proximity=False,
                  to_unit_cell=False, coords_are_cartesian=False,
-                 site_properties=None):
+                 site_properties=None, name="N/A"):
         super(Structure, self).__init__(lattice, species, coords,
                                         charge=charge,
                                         validate_proximity=validate_proximity,
@@ -25,21 +27,26 @@ class MofStructure(Structure):
         self.organic = None
         self.metal_coord_spheres = None
         self.all_coord_spheres_indices = None
-        self.name = "N/A"
         self.species_str = [str(s) for s in self.species]
 
         self.summary = dict()
-        self.summary['material_name'] = self.name
-        self.summary['problematic'] = False
-        self.summary['max_surface_area_frac'] = 0.0
+        self.summary['cif_okay'] = 'N/A'
+        self.summary['problematic'] = 'N/A'
+        self.summary['has_oms'] = 'N/A'
         self.summary['metal_sites'] = []
-        self.summary['max_surface_area'] = 0.0
-        self.summary['uc_volume'] = self.volume
-        self.summary['open_metal_density'] = 0.0
+        self.summary['oms_density'] = 'N/A'
+        self.summary['checksum'] = 'N/A'
         #We need to set to have only one of each metal atom, and then convert to
         #a list to store as JSON (JSON does not support sets)
         metal_set = set([s for s in self.species_str if ap.check_if_metal(s)])
-        self.summary['metals'] = list(metal_set)
+        non_metal_set = set([s for s in self.species_str
+                             if not ap.check_if_metal(s)])
+        self.summary['metal_species'] = list(metal_set)
+        self.summary['non_metal_species'] = list(non_metal_set)
+        self.summary['name'] = name
+        self.summary['uc_volume'] = self.volume
+        self.summary['density'] = self.density
+        self.summary['date_created'] = str(datetime.datetime.now().isoformat())
 
         self.tolerance = dict()
         self.tolerance['plane'] = 25  # 30 # 35
@@ -53,15 +60,36 @@ class MofStructure(Structure):
 
     @classmethod
     def from_file(cls, filename, primitive=False, sort=False, merge_tol=0.0):
-        s = Structure.from_file(filename, primitive=primitive, sort=sort,
-                                merge_tol=merge_tol)
-        s_mof = cls(s.lattice, s.species, s.frac_coords)
-        s_mof.name = os.path.splitext(os.path.basename(filename))[0]
-        s_mof.summary['material_name'] = s_mof.name
+        mof_name = os.path.splitext(os.path.basename(filename))[0]
+        try:
+            s = Structure.from_file(filename, primitive=primitive, sort=sort,
+                                    merge_tol=merge_tol)
+            s_mof = cls(s.lattice, s.species, s.frac_coords, name=mof_name)
+            s_mof.summary['cif_okay'] = True
+            s_mof.summary['checksum'] = Helper.get_checksum(filename)
+        except Exception as e:
+            print('\nAn Exception occured: {}'.format(e))
+            print('Cannot load {}\n'.format(filename))
+            # Make a placeholder MOF object, set all its summary entries
+            # to None and set cif_okay to False
+            s_mof = cls([[10, 0, 0], [0, 10, 0], [0, 0, 10]],
+                        ["C"], [[0, 0, 0]], name=mof_name)
+            s_mof._mark_failed_to_read()
+            s_mof.summary['cif_okay'] = False
+
         return s_mof
 
+    def _mark_failed_to_read(self):
+        # for key in self.summary:
+        #     if key not in ['material_name']:
+        #         self.summary[key] = None
+        self.summary['metal_species'] = None
+        self.summary['non_metal_species'] = None
+        self.summary['uc_volume'] = None
+        self.summary['density'] = None
+
     def set_name(self, name):
-        self.summary['material_name'] = name
+        self.summary['name'] = name
 
     def split_structure_to_organic_and_metal(self):
         self.metal = Structure(self.lattice, [], [])
@@ -117,7 +145,7 @@ class MofStructure(Structure):
 
         c_sphere = MetalSite(self.lattice, [self.species[center]],
                                            [self.frac_coords[center]],
-                                           tolerance=self.tolerance)
+                             tolerance=self.tolerance)
 
         cs_i = self.find_coord_sphere_indices(center, dist)
         for i in cs_i[1:]:
@@ -162,6 +190,7 @@ class MofStructure(Structure):
         self.split_structure_to_organic_and_metal()
         self.find_metal_coord_spheres()
         self.find_all_coord_sphere_indices()
+        self.summary['problematic'] = False
         oms_cs_list = []  # list of coordination sequences for each open metal found
         cms_cs_list = []  # list of coordination sequences for each closed metal found
         # cs_list = []
@@ -187,8 +216,8 @@ class MofStructure(Structure):
         unique_sites = [1 for s in self.summary['metal_sites'] if s['unique']]
         open_sites = [s['is_open'] for s in self.summary['metal_sites']]
 
-        self.summary['open_metal_density'] = sum(unique_sites) / self.volume
-        self.summary['metal_sites_found'] = any(open_sites)
+        self.summary['oms_density'] = sum(unique_sites) / self.volume
+        self.summary['has_oms'] = any(open_sites)
         if output_folder is not None:
             self.write_results(output_folder, output_level)
             os.remove(running_)
@@ -244,14 +273,16 @@ class MofStructure(Structure):
         Helper.make_folder(output_folder)
         for index, mcs in enumerate(self.metal_coord_spheres):
             mcs.write_xyz_file(output_folder, index)
-
-        output_fname = output_folder + '/' + self.name + '_metal.cif'
         if self.metal:
+            output_fname = "{}/{}_metal.cif".format(output_folder,
+                                                    self.summary['name'])
             self.metal.to(filename=output_fname)
-        output_fname = output_folder + '/' + self.name + '_organic.cif'
+        output_fname = "{}/{}_organic.cif".format(output_folder,
+                                                  self.summary['name'])
         self.organic.to(filename=output_fname)
 
-        json_file_out = output_folder + '/' + self.name + '.json'
+        json_file_out = "{}/{}.json".format(output_folder,
+                                                  self.summary['name'])
         summary = copy.deepcopy(self.summary)
         if output_level == 'normal':
             for ms in summary["metal_sites"]:
@@ -521,3 +552,10 @@ class Helper:
         d = os.path.join(dest, s)
         if not os.path.exists(d):
             shutil.copytree(src, d)
+
+    @classmethod
+    def get_checksum(cls, filename):
+        # print(type(hashlib.sha256(open(filename, 'rb').read()).digest()))
+        # print(str(hashlib.sha256(open(filename, 'rb').read()).digest()))
+        # print(hashlib.sha256(open(filename, 'rb').read()).digest())
+        return hashlib.sha256(open(filename, 'rb').read()).hexdigest()

@@ -14,32 +14,40 @@ from mof import Helper
 from mof import MofStructure
 from atomic_parameters import atoms as ap
 pd.options.display.max_rows = 1000
+from sys import exit
 
 
 class MofCollection:
     separator = "".join(['-'] * 50)
 
-    def __init__(self, path_list, analysis_folder='analysis'):
+    def __init__(self, path_list, analysis_folder='analysis_folder'):
         """
         An object to
 
         :param analysis_folder: Full path to the folder where the results will
         be stored.
         """
-        self.analysis_folder = analysis_folder
-        self.summary_folder = self.analysis_folder + '/summary'
-        self.load_balance_filename = self.analysis_folder + '/load_balance_info'
+        self._analysis_folder = analysis_folder
         self.path_list = path_list
         self.mof_coll = []
         self.batches = []
-        self._results = None
-        self._results_df = None
+        self._metal_site_df = None
+        self._properties = {}
         self.load_balance_index = {}
         self.analysis_limit = None
 
+        self.filter_functions = {
+            "density": self._apply_filter_range,
+            "oms_density": self._apply_filter_range,
+            "uc_volume": self._apply_filter_range,
+            "metal_species": self._apply_filter_in_value,
+            "non_metal_species": self._apply_filter_in_value,
+            "cif_okay": self._apply_filter_value,
+            "has_oms": self._apply_filter_value,
+            "mof_name": self._apply_value_in_filter
+        }
+
         self.load_mofs()
-        Helper.make_folder(self.analysis_folder)
-        Helper.make_folder(self.summary_folder)
 
     def __len__(self):
         return len(self.mof_coll)
@@ -61,7 +69,7 @@ class MofCollection:
         return prnt_str
 
     @classmethod
-    def from_folder(cls, collection_folder, analysis_folder='analysis',
+    def from_folder(cls, collection_folder, analysis_folder='analysis_folder',
                     name_list=None):
 
         if name_list:
@@ -72,24 +80,78 @@ class MofCollection:
             path_list = [d+'/'+name for name in name_list]
         else:
             path_list = glob.glob(collection_folder + "/*.cif")
-
         return cls(path_list, analysis_folder)
 
     def load_mofs(self):
         for mof_file in self.path_list:
+            checksum = Helper.get_checksum(mof_file)
             mof_name = os.path.splitext(os.path.basename(mof_file))[0]
-            mof_info = {"mof_name": mof_name, "mof_file": mof_file}
+            mof_info = {"mof_name": mof_name,
+                        "mof_file": mof_file,
+                        "checksum": checksum}
             self.mof_coll.append(mof_info)
+            if checksum not in self.properties:
+                self.properties[checksum] = {"mof_name": mof_name}
+            else:
+                assert self.properties[checksum]["mof_name"] == mof_name
+            if self.check_if_results_exist(mof_name):
+                self._compare_checksums(mof_file, mof_name, checksum)
 
-    def analyse_mofs(self, overwrite=False, num_batches=1, redo_balance=False,
-                     analysis_folder=None, analysis_limit=None):
+        self.store_properties()
+
+    def _compare_checksums(self, mof_file, mof_name, checksum):
+        mof_folder = "{0}/{1}/".format(self.oms_results_folder,
+                                       mof_name)
+        results_file = "{0}/{1}.json".format(mof_folder, mof_name)
+        results_dict = json.load(open(results_file))
+        if results_dict['checksum'] != checksum:
+            print("Results for a MOF named {0} appear to already exist"
+                  " in the analysis folder \n\"{1}\".\nHowever the "
+                  "file checksum in the result file does not match the "
+                  "checksum of \n\"{2}\".\n\nHave the CIF files in the "
+                  "collection changed since the results were computed?"
+                  "\nClear results and try again.".format(mof_name,
+                                                          mof_folder,
+                                                          mof_file))
+            exit(1)
+
+    @property
+    def analysis_folder(self):
+        Helper.make_folder(self._analysis_folder)
+        return self._analysis_folder
+
+    @analysis_folder.setter
+    def analysis_folder(self, analysis_folder):
+        self._analysis_folder = analysis_folder
+
+    @property
+    def oms_results_folder(self):
+        orf = self.analysis_folder + '/oms_results'
+        Helper.make_folder(orf)
+        return orf
+
+    @property
+    def summary_folder(self):
+        sf = self.analysis_folder + '/summary'
+        Helper.make_folder(sf)
+        return sf
+
+    @property
+    def _properties_filename(self):
+        return self.analysis_folder + '/properties.pickle'
+
+    def analyse_mofs(self, overwrite=False, num_batches=1, analysis_folder=None,
+                     analysis_limit=None):
+        print(self.separator)
+        print("Running OMS Analysis...")
         self.analysis_limit = analysis_limit
         if analysis_folder is not None:
             self.analysis_folder = analysis_folder
+        Helper.make_folder(self.analysis_folder)
+
         t0 = time.time()
 
-        self.make_batches(num_batches, overwrite, redo_balance)
-
+        self.make_batches(num_batches, overwrite)
         processes = []
         for i, batch in enumerate(self.batches):
             p = Process(target=self.run_batch, args=(i, batch, overwrite,))
@@ -99,49 +161,60 @@ class MofCollection:
         for p in processes:
             p.join()
 
+        print()
+        self._validate_properties(['has_oms'])
+
         t1 = time.time()
         print('\nAnalysis Finished. Time required:{:.2f} sec'.format(t1 - t0))
+        print(self.separator)
 
     def run_batch(self, b, batch, overwrite):
-        lb = (len(batch)-1)/100.0
+        lb = len(batch)/100.0
         for i, mi in enumerate(batch):
-            print('Batch {} {:.2f}% : '.format(b+1, i/lb), end='')
+            print("Batch {} {:.2f}% : Analysing {:100} "
+                  "".format(b+1, (i+1)/lb, mi['mof_name']), end='\r',
+                  flush=True)
             self.analyse(mi, overwrite)
-
-        print('FINISHED Batch {}.'.format(b + 1))
+        print('\nFINISHED Batch {}.'.format(b + 1))
 
     def analyse(self, mi, overwrite):
-        mof_folder = "{}/{}".format(self.analysis_folder, mi['mof_name'])
+        mof_folder = "{}/{}".format(self.oms_results_folder, mi['mof_name'])
         results_exist = self.check_if_results_exist(mi['mof_name'])
         if not overwrite and results_exist:
             print("Skipping {}. Results already exist and overwrite is set "
                   "to False.".format(mi['mof_name']))
             return
-        print("Analysing {}".format(mi['mof_name']))
+        # print("Analysing {}".format(mi['mof_name']), end='\r', flush=True)
         mof = self.create_mof_from_cifile(mi['mof_file'])
-        # mof = MofStructure.from_file(mi['mof_file'], primitive=False)
-        if mof:
-            mof.analyze_metals(output_folder=mof_folder, output_level='debug')
+        if mof.summary['cif_okay']:
+            mof.analyze_metals(output_folder=mof_folder)
 
     def check_if_results_exist(self, mof_name):
-        mof_folder = "{}/{}".format(self.analysis_folder, mof_name)
+        mof_folder = "{}/{}".format(self.oms_results_folder, mof_name)
         if os.path.isfile(mof_folder+'/'+mof_name+'.json'):
             if not os.path.isfile(mof_folder + '/' + 'analysis_running'):
                 return True
         return False
 
-    def make_batches(self, num_batches=1, overwrite=False, redo_balance=False):
+    def make_batches(self, num_batches=1, overwrite=False):
+        print(self.separator)
         if cpu_count() < num_batches:
             warnings.warn('You requested {} batches but there are only {}'
                           ' CPUs available.'.format(num_batches, cpu_count()))
         b_s = {1: 'batch', 2: 'batches'}[min(num_batches, 2)]
         print('{} {} requested. '.format(num_batches, b_s))
         print('Overwrite is set to {}. '.format(overwrite))
+        print('Storing results in {}. '.format(self.oms_results_folder))
         print(self.separator)
-        self.validate_load_balance_info(redo_balance)
+        self._validate_properties(['load_balancing_index'])
+        print(self.separator)
+        lbi = {}
+        for mi in self.mof_coll:
+            mp = self.properties[mi['checksum']]
+            lbi[mi['mof_name']] = mp['load_balancing_index']
         # Remove any structures not in load balancing index.
-        subset = [mc for mc in self.mof_coll if mc['mof_name'] in
-                  self.load_balance_index]
+        subset = [mc for mc in self.mof_coll if mc['mof_name'] in lbi]
+
         # If there is no balancing info for a MOF at this point it means
         # that it could not be read.
         if len(self.mof_coll) != len(subset):
@@ -150,121 +223,100 @@ class MofCollection:
 
         # Remove any structures already completed
         if not overwrite:
-            print('\nChecking if results for any of the MOFs exist...')
+            print('Checking if results for any of the MOFs exist...')
             all_ = len(subset)
             subset = [mc for mc in subset if not
                       self.check_if_results_exist(mc['mof_name'])]
-            print('Skipping {} MOFs because results were found. '
-                  ''.format(all_ - len(subset)))
+            msg = {0: "Will not skip any MOFs",
+                   1: "Skipping {} MOFs because results were found. "
+                      "".format(all_ - len(subset))}
+            print(msg[min(1, all_ - len(subset))])
 
-        self.batches = [[] for b in range(0, num_batches)]
         # Sort mof list using the load balancing index
-        subset.sort(key=lambda x: self.load_balance_index[x['mof_name']])
+        subset.sort(key=lambda x: lbi[x['mof_name']])
 
-        sum_load_balance = sum(self.load_balance_index[mi["mof_name"]]
-                               for mi in subset)
+        sum_load_balance = sum(lbi[mi["mof_name"]] for mi in subset)
         lb_per_batch = sum_load_balance / num_batches
 
         # Select only up to analysis_limit to work with
         if self.analysis_limit and len(subset) > self.analysis_limit:
             subset = subset[0:self.analysis_limit]
-        sum_lb = 0.0
-        batch = 0
-        for mi in subset:
-            lb = self.load_balance_index[mi["mof_name"]]
-            sum_lb += lb
-            self.batches[batch].append(mi)
+
+        self.batches = [[] for b in range(num_batches)]
+        for i, mi in enumerate(subset):
+            sum_lb = sum([lbi[mi["mof_name"]] for mi in subset[0:i]])
             batch = int(sum_lb / lb_per_batch)
+            self.batches[batch].append(mi)
         print(self.separator)
         for i, batch in enumerate(self.batches):
             print("Batch {0} has {1} MOFs".format(i+1, len(batch)))
         print(self.separator)
 
-    def validate_load_balance_info(self, redo_balance=False):
-        if os.path.isfile(self.load_balance_filename) and not redo_balance:
-            with open(self.load_balance_filename, 'rb') as load_balance_file:
-                self.load_balance_index = pickle.load(load_balance_file)
-            print('Validating Load Balancing Info...')
-            for mi in self.mof_coll:
-                if mi['mof_name'] not in self.load_balance_index:
-                    print("Load Balance Info is missing for {}. Computing"
-                          " now".format(mi['mof_name']))
-                    self.compute_load_balance_info(mi)
-        else:
-            if redo_balance:
-                print('Recomputing Load Balancing Info.')
-            else:
-                print('Load Balancing Info not found.')
-                print('This might take a while but needs to be done once.')
-            print('\nComputing now...')
-            self.compute_load_balance_index()
-
-        with open(self.load_balance_filename, 'wb') as load_balance_file:
-            pickle.dump(self.load_balance_index, load_balance_file)
-        print('Done')
-
-    def compute_load_balance_index(self):
-        mof_files_n_100 = (len(self.mof_coll) - 1) / 100
-        for i, mi in enumerate(self.mof_coll):
-            print("{:5.2f}% {:100}".format(i / mof_files_n_100, mi['mof_name']),
-                  end="\r")
-            self.compute_load_balance_info(mi)
-        print("")
-
-    def compute_load_balance_info(self, mi):
-        mof = self.create_mof_from_cifile(mi['mof_file'])
-        if not mof:
-            return False
-        self.load_balance_index[mi['mof_name']] = len(mof)*len(mof)
-        return True
-
     @staticmethod
     def create_mof_from_cifile(path_to_mof):
-        try:
-            mof = MofStructure.from_file(path_to_mof, primitive=False)
-        except Exception as e:
-            print('\nAn Exception occured: {}'.format(e))
-            print('Cannot load {}\n'.format(path_to_mof))
-            return False
+        mof = MofStructure.from_file(path_to_mof, primitive=False)
         return mof
 
-    def check_structures(self):
-        print('\nChecking structures...')
-        self.load_balance_index = {}
-        self.compute_load_balance_index()
-        read = [mc for mc in self.mof_coll if mc['mof_name'] in
-                self.load_balance_index]
-        not_read = [mc for mc in self.mof_coll if mc['mof_name'] not in
-                    self.load_balance_index]
-        print('Done')
-        print('\nChecked {} structures.'.format(len(self.mof_coll)))
-        print('{} were read.'.format(len(read)))
-        print('{} were NOT read.'.format(len(not_read)))
+    def _loop_over_collection(self, func):
+        lm = len(self.mof_coll) / 100
+        for i, mi in enumerate(self.mof_coll):
+            print("{:5.2f}% {:100}".format((i+1) / lm, mi['mof_name']),
+                  end="\r")
+            func(mi)
+        print()
 
-        print('\nThe following structures could not be read:')
+    def read_ciffiles(self):
+        print(self.separator)
+        print('Reading CIF files and updating properties...')
+        self._loop_over_collection(self._update_property_from_ciffile)
+        self.store_properties()
+        print('Done')
+        print(self.separator)
+
+    def _update_property_from_ciffile(self, mi):
+        mp = self.properties[mi['checksum']]
+        mof = self.create_mof_from_cifile(mi['mof_file'])
+        if mof:
+            mp.update(mof.summary)
+            self.load_balance_index[mi['mof_name']] = len(mof) * len(mof)
+            mp['load_balancing_index'] = self.load_balance_index[mi['mof_name']]
+
+    def check_structures(self):
+        self._validate_properties(['cif_okay'])
+        not_read = [mi for mi in self.mof_coll
+                    if not self.properties[mi['checksum']]['cif_okay']]
+        read_len = len(self.mof_coll) - len(not_read)
+        print('\nChecked {} structures.'.format(len(self.mof_coll)))
+        msg1 = {0: '\r',
+                1: '{} was read.'.format(read_len),
+                2: '{} were read.'.format(read_len)}
+        msg2 = {0: '\r',
+                1: '{} was NOT read.'.format(len(not_read)),
+                2: '{} were NOT read.'.format(len(not_read))}
+        print(msg1[min(2, read_len)])
+        print(msg2[min(2, len(not_read))])
+
+        msg = {0: "\r", 1: "\nThe following structures could not be read:"}
+        print(msg[min(1, len(not_read))])
         for i, mi in enumerate(not_read):
             print("{}".format(mi['mof_name']))
         print('\nFinished checking structures.')
 
     def check_analysis_status(self):
-        done = 0
-        not_done = []
-        for mi in self.mof_coll:
-            mf = '/'.join([self.analysis_folder, mi['mof_name']])
-            if self.check_if_results_exist(mf):
-                done += 1
-            else:
-                not_done.append(mf)
-        if done > 0:
-            print('\nAnalysis for {} out of {} structures have been completed.'
-                  .format(done, len(self.mof_coll)))
-        else:
-            print('\nAnalysis for no structures has been completed.'
-                  .format(done, len(self.mof_coll)))
-        if done != len(self.mof_coll):
-            print('The following structures are missing.')
-            for nd in not_done:
-                print(nd)
+        print(self.separator)
+        not_done = [mi['mof_file'] for mi in self.mof_coll
+                    if not self.check_if_results_exist(mi['mof_name'])]
+        done = len(self.mof_coll) - len(not_done)
+        msg1 = {0: '\nAnalysis for no structures has been completed.',
+                1: '\nAnalysis for {} out of {} structures have been completed.'
+                   .format(done, len(self.mof_coll))}
+        msg2 = {0: "\r", 1: "\nThe following structures are missing:"}
+
+        print(msg1[min(1, done)])
+        print(msg2[min(1, len(not_done))])
+        for nd in not_done:
+            print(nd)
+        print(self.separator)
 
     def filter_collection(self, using_filter=None,
                           new_collection_folder=None,
@@ -284,128 +336,232 @@ class MofCollection:
         :return: A MofCollection with only the filtered MOFs pointing to the
         new_collection_folder
         """
-        path_list = []
-        mof_files_n_100 = (len(self.mof_coll) - 1) / 100
-        for i, mi in enumerate(self.mof_coll):
-            print("{:5.2f}% {:100}".format(i / mof_files_n_100, mi['mof_name']),
-                  end="\r")
-            mof = self.create_mof_from_cifile(mi['mof_file'])
-            if not mof:
-                continue
-            for key in using_filter:
-                value = using_filter[key]
-                if all([v in mof.summary[key] for v in value]):
-                    path_list.append(mi['mof_file'])
+        print(self.separator)
+        if any([f not in self.filter_functions for f in using_filter]):
+            print('Unknown filter. Try again using one of the follwing '
+                  'filters:\n\"{}\"'.format(", ".join(self.filter_functions)))
+            print(self.separator)
+            return
 
-        print('\n')
-        found_s = {0: "No", 1: len(path_list)}[min(1, len(path_list))]
-        print('{} MOFs were matched using the provided filter.'.format(found_s))
-        if len(path_list) == 0:
+        validation_level, cf = self._validate_properties(using_filter)
+        if validation_level == 1 and not cf:
+            print('Properties from CIF files could not be validated.'
+                  'Check that all CIF files can be read')
+            return
+        elif validation_level == 2 and not cf:
+            print('Requested a filter that needs OMS information but the '
+                  'OMS analysis does not appear to be complete.\n'
+                  'Run it first and try again.')
+            return
+
+        print(self.separator)
+        print('Filtering collection.')
+        filtered_list = []
+        for i, mi in enumerate(self.mof_coll):
+            mp = self.properties[mi['checksum']]
+            fun = self.apply_filter
+            if all([fun(f, mp[f], using_filter[f]) for f in using_filter]):
+                filtered_list.append(mi['mof_file'])
+
+        found_s = {0: "No", 1: len(filtered_list)}[min(1, len(filtered_list))]
+        print('\n{} MOFs were matched using the provided'
+              ' filter.'.format(found_s))
+        if len(filtered_list) == 0:
             print('No collection returned.')
             return None
         print('Returning a new collection using the matched MOFs.')
-
-        sub_collection = self.make_subset(path_list)
-        if new_collection_folder:
-            print('The matched cif files for these MOFs will be copied to'
-                  ' the specified folder:\n{}'.format(new_collection_folder))
-            sub_collection.copy_cifs(new_collection_folder)
-        else:
-            print('The cif files will point to original locations.')
+        sub_collection = self.make_subset(filtered_list)
         print(self.separator)
+
+        sub_collection.copy_cifs(new_collection_folder)
+        sub_collection.copy_results(new_analysis_folder)
+
         return sub_collection
+
+    def apply_filter(self, filter_, v, f):
+        return self.filter_functions[filter_](v, f)
+
+    @staticmethod
+    def _apply_filter_value(v, f):
+        if not v:
+            return False
+        return v == f
+
+    @staticmethod
+    def _apply_filter_in_value(v, f):
+        if not v:
+            return False
+        return all([f_ in v for f_ in f])
+
+    @staticmethod
+    def _apply_value_in_filter(v, f):
+        if not v:
+            return False
+        return v in f
+
+    @staticmethod
+    def _apply_filter_range(v, f):
+        if not v:
+            return False
+        return min(f) <= v <= max(f)
 
     def make_subset(self, path_list):
         subset = MofCollection(path_list,
                                analysis_folder=self.analysis_folder)
         return subset
 
+    def _check_filters(self, filters):
+        count_ok = 0
+        for mi in self.mof_coll:
+            mp = self.properties[mi['checksum']]
+            if all([f in mp for f in filters]):
+                if all([mp[f] != 'N/A' for f in filters]):
+                    count_ok += 1
+                else:
+                    if not mp['cif_okay']:
+                        count_ok += 1
+        print(count_ok == len(self.mof_coll))
+        return count_ok == len(self.mof_coll)
+
     def copy_cifs(self, target_folder):
+        if target_folder is None:
+            return
         tf_abspath = os.path.abspath(target_folder)
         Helper.make_folder(tf_abspath)
+        print(self.separator)
         print('The cif files for this collection will be copied to'
-              ' the specified folder:\n{}'.format(tf_abspath))
+              ' the specified folder:\n\"{}\"'.format(tf_abspath))
         print('The cif paths will be updated.')
 
         mofl_col_tmp = list(self.mof_coll)
         for i, mi in enumerate(mofl_col_tmp):
             destination_path = "{}/{}.cif".format(tf_abspath, mi['mof_name'])
-            updated_mof_info = {"mof_name": mi['mof_name'],
-                                "mof_file": destination_path}
-            self.mof_coll[i] = updated_mof_info
+            self.mof_coll[i] = {"mof_name": mi['mof_name'],
+                                "mof_file": destination_path,
+                                "checksum": mi['checksum']}
             if not os.path.isfile(destination_path):
                 shutil.copyfile(mi['mof_file'], destination_path)
         print(self.separator)
 
     def copy_results(self, target_folder):
+        if target_folder is None:
+            return
+
+        print(self.separator)
         tf_abspath = os.path.abspath(target_folder)
+        destination_path = tf_abspath + '/oms_results'
+
+        print('The result files for this collection will be copied to the '
+              'specified folder:\n{}\nThe analysis folder will be updated.'
+              ''.format(tf_abspath))
+
         Helper.make_folder(tf_abspath)
-        print('The result files for this collection will be copied to'
-              ' the specified folder:\n{}'.format(tf_abspath))
-        print('The analysis folder will be updated.')
+        Helper.make_folder(destination_path)
 
         for i, mi in enumerate(self.mof_coll):
             mof_name = mi['mof_name']
             if self.check_if_results_exist(mof_name):
-                destination_path = tf_abspath
-                source_path = "{}/{}".format(self.analysis_folder, mof_name)
+                source_path = "{}/{}".format(self.oms_results_folder, mof_name)
                 Helper.copy_folder(destination_path, source_path)
-        self.analysis_folder = target_folder
+        self.analysis_folder = tf_abspath
+        self._validate_properties(['has_oms'])
         print(self.separator)
 
     @property
-    def results(self):
-        """Loop over all json files in output_folder and return
-        a list of dictionaries for each json file"""
-        if self._results is not None:
-            print('Results are already loaded.')
-            return self._results
+    def properties(self):
+        if not self._properties and os.path.isfile(self._properties_filename):
+            # print('Read properties from '
+            #       'file: {}'.format(self._properties_filename))
+            with open(self._properties_filename, 'rb') as properties_file:
+                self._properties = pickle.load(properties_file)
+        return self._properties
 
-        print('Loading results from \n {}'.format(self.analysis_folder))
-        self._results = []
-        lb = (len(self.mof_coll) - 1)/100.0
+    def store_properties(self):
+        with open(self._properties_filename, 'wb') as properties_file:
+            pickle.dump(self._properties, properties_file)
+
+    def _update_property_from_oms_result(self, mi):
+        mp = self.properties[mi['checksum']]
+        mof_name = mp["mof_name"]
+        mof_folder = "{0}/{1}/".format(self.oms_results_folder, mof_name)
+        results_file = "{0}/{1}.json".format(mof_folder, mof_name)
+        results_dict = None
+        if os.path.isfile(results_file):
+            results_dict = json.load(open(results_file))
+        if isinstance(results_dict, dict):
+            results_dict['source_name'] = mof_folder
+            mp.update(results_dict)
+        # else:
+        #     print('Problem reading results file for {}'.format(mof_name))
+        #     print(results_file)
+
+    def read_oms_results(self):
+        print(self.separator)
+        print('Adding results to properties.')
+        self._loop_over_collection(self._update_property_from_oms_result)
+        print('Done')
+        self.store_properties()
+        print(self.separator)
+
+    def _validate_properties(self, keys):
+        msg = {1: "Validating property", 2: "Validating roperties"}
+        print('\n{} : '.format(msg[min(2, len(keys))]), end='')
+        print("\"{}\"".format(", ".join([k for k in keys])))
+        validation_level = 0
+        lm = len(self.mof_coll) / 100
         for i, mi in enumerate(self.mof_coll):
-            mof_name = mi["mof_name"]
-            json_file = "{0}/{1}/{1}.json".format(self.analysis_folder,
-                                                  mof_name)
-            print("{:5.2f}% {:100}".format(i / lb, mi['mof_name']), end="\r")
-            json_dict = None
-            if os.path.isfile(json_file):
-                json_dict = json.load(open(json_file))
-            if isinstance(json_dict, dict):
-                json_dict['source_name'] = self.analysis_folder + '/' + mof_name
-                self._results.append(json_dict)
-            else:
-                print('Problem reading results file for{}'.format(mof_name))
-        print('Found results for {} MOFs.'.format(len(self._results)))
-        return self._results
+            print("{:5.2f}% {:100}".format((i+1) / lm, mi['mof_name']),
+                  end="\r")
+            mp = self.properties[mi['checksum']]
+            if not self._validate_property(mp, keys):
+                self._update_property_from_ciffile(mi)
+                validation_level = 1
+            if not self._validate_property(mp, keys):
+                self._update_property_from_oms_result(mi)
+                validation_level = 2
+            if not self._validate_property(mp, keys):
+                # count_ok += 1
+                self.store_properties()
+                print('\nProperty Missing\n{}'.format(self.separator))
+                return validation_level, False
+        self.store_properties()
+        print()
+        return validation_level, True
+
+    @staticmethod
+    def _validate_property(mp, keys):
+        test1 = all([f in mp for f in keys])
+        if test1 and all([mp[f] != 'N/A' for f in keys]):
+            return True
+        if test1 and not mp['cif_okay']:
+            return True
+        return False
 
     @property
-    def results_df(self):
-        if self._results_df is not None:
-            return self._results_df
+    def metal_site_df(self):
+        if self._metal_site_df is not None:
+            return self._metal_site_df
+        if not self._validate_properties(['has_oms']):
+            print('OMS analysis not finished for all MOFs in collection.')
+            return False
         site_info = {}
-        count_sites = 0
-        count_mofs = 0
-        mofs = []
-        for json_dict in self.results:
-            metal_sites = json_dict['metal_sites']
-            mof_name = json_dict['material_name']
-            mofs.append(mof_name)
+        for mi in self.mof_coll:
+            mp = self.properties[mi['checksum']]
+            if 'metal_sites' not in mp:
+                continue
+            metal_sites = mp['metal_sites']
             if len(metal_sites) == 0:
-                print('No Metal Found in {}'.format(mof_name))
+                print('No Metal Found in {}'.format(mp['name']))
             for i, ms in enumerate(metal_sites):
-                key = mof_name + '_' + str(i)
+                key = mp['name'] + '_' + str(i)
                 site_info[key] = ms
                 if 'all_dihedrals' in ms:
                     del site_info[key]['all_dihedrals']
                 if 'min_dihedral' in ms:
                     del site_info[key]['min_dihedral']
-                site_info[key]['mof_name'] = mof_name
-                count_sites += 1
-            count_mofs += 1
-        self._results_df = pd.DataFrame.from_dict(site_info, orient='index')
-        return self._results_df
+                site_info[key]['mof_name'] = mp['name']
+        self._metal_site_df = pd.DataFrame.from_dict(site_info, orient='index')
+        return self._metal_site_df
 
     def summarize_tfactors(self):
         """Read all the tfactors for all the open metal sites found in all the
@@ -416,7 +572,7 @@ class MofCollection:
         Helper.make_folder(self.summary_folder)
         Helper.make_folder(tfac_analysis_folder)
 
-        df = self.results_df.copy()
+        df = self.metal_site_df.copy()
         sites_u = df[df['unique']]
 
         for n in range(4, 7):
@@ -443,20 +599,20 @@ class MofCollection:
         s_no['t_factor'].hist(bins=50, range=(0, 1), normed=False)
         plt.show()
 
-    def write_histogram(self, sites, dens, target):
+    @staticmethod
+    def write_histogram(sites, dens, target):
         hist, edges = np.histogram(sites, bins=50, range=(0, 1), density=dens)
         with open(target, 'w') as hist_file:
             w = (edges[1] - edges[0]) / 2
             for e, h in zip(edges, hist):
                 print(e + w, h, file=hist_file)
 
-    def collect_statistics(self, max_atomic_number=54):
-        df = self.results_df.copy()
+    def summarize_results(self, max_atomic_number=None):
+        df = self.metal_site_df.copy()
         site_df_u = df.loc[df['unique']]
         site_df_o = site_df_u.loc[site_df_u['is_open']]
 
-        all_sites = self.group_and_summarize(site_df_u, ['MOFs',
-                                                         'Sites'])
+        all_sites = self.group_and_summarize(site_df_u, ['MOFs', 'Metal Sites'])
         open_sites = self.group_and_summarize(site_df_o, ['MOFs_with_OMS',
                                                           'OMS'])
 
@@ -465,8 +621,8 @@ class MofCollection:
         s_df = s_df.astype(int)
 
         s_df['MOFs_with_OMS(%)'] = 100.0 * s_df['MOFs_with_OMS']/s_df['MOFs']
-        s_df['OMS (%)'] = 100.0 * s_df['OMS'] / s_df['Sites']
-        cols = ['MOFs', 'MOFs_with_OMS', 'Sites', 'OMS',
+        s_df['OMS (%)'] = 100.0 * s_df['OMS'] / s_df['Metal Sites']
+        cols = ['MOFs', 'MOFs_with_OMS', 'Metal Sites', 'OMS',
                 'MOFs_with_OMS(%)', 'OMS (%)']
         s_df = s_df[cols]
 
@@ -474,19 +630,12 @@ class MofCollection:
                                                                   ''.format)
         s_df['OMS (%)'] = s_df['OMS (%)'].apply('{:.2f} %'.format)
         s_df.sort_values("MOFs", inplace=True, ascending=False)
-        s_df.to_csv(self.summary_folder + '/stats.out', sep=' ')
 
-        #Collect statistics for only up to max_atomic_number
-        subset = pd.Series(s_df.index).apply(ap.check_atomic_number,
-                                             args=(max_atomic_number,))
-        site_df_subset = s_df.loc[subset.values]
-        fname = "{0}/stats_less_{1}.out".format(self.summary_folder,
-                                                max_atomic_number)
-        site_df_subset.to_csv(fname, sep=' ')
         num_mofs = df['mof_name'].nunique()
         num_oms_mofs = df[df['is_open']]['mof_name'].nunique()
         num_sites = len(site_df_u)
         num_oms_sites = len(site_df_u[site_df_u['is_open']])
+
         print(self.separator)
         print('Number of total MOFs: {}'.format(num_mofs))
         print('Number of total MOFs with open metal sites: {}'
@@ -495,10 +644,23 @@ class MofCollection:
         print('Number of total unique open metal sites: {}'
               ''.format(num_oms_sites))
         print(self.separator)
-        print("Summary Table\n")
-        print(site_df_subset)
 
-    def group_and_summarize(self, df, names=None):
+        msg = "Summary Table\n"
+        fname = "{0}/stats.out".format(self.summary_folder, max_atomic_number)
+        if max_atomic_number:
+            subset = pd.Series(s_df.index).apply(ap.check_atomic_number,
+                                                 args=(max_atomic_number,))
+            s_df = s_df.loc[subset.values]
+            fname = "{0}/stats_less_{1}.out".format(self.summary_folder,
+                                                    max_atomic_number)
+            msg = "Summary Table for metal atoms with atomic number smaller " \
+                  "than {}.\n".format(max_atomic_number)
+        print(msg)
+        print(s_df)
+        s_df.to_csv(fname, sep=' ')
+
+    @staticmethod
+    def group_and_summarize(df, names=None):
         rename = {"mof_name": names[0], "is_open": names[1]}
         agg_dict = {"mof_name": pd.Series.nunique, "is_open": "count"}
         return df.groupby('metal').agg(agg_dict).rename(columns=rename)
