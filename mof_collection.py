@@ -12,7 +12,7 @@ import matplotlib.pylab as plt
 from multiprocessing import Process, cpu_count
 from mof import Helper
 from mof import MofStructure
-from atomic_parameters import atoms as ap
+from atomic_parameters import Atom
 pd.options.display.max_rows = 1000
 from sys import exit
 
@@ -648,8 +648,8 @@ class MofCollection:
         msg = "Summary Table\n"
         fname = "{0}/stats.out".format(self.summary_folder, max_atomic_number)
         if max_atomic_number:
-            subset = pd.Series(s_df.index).apply(ap.check_atomic_number,
-                                                 args=(max_atomic_number,))
+            subset = pd.Series(s_df.index).apply(
+                lambda x: Atom(x).atomic_number <= max_atomic_number)
             s_df = s_df.loc[subset.values]
             fname = "{0}/stats_less_{1}.out".format(self.summary_folder,
                                                     max_atomic_number)

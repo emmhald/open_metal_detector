@@ -2,7 +2,7 @@
 import json
 import copy
 from pymatgen import Structure
-from atomic_parameters import atoms as ap
+from atomic_parameters import Atom
 import numpy as np
 import sys
 import itertools
@@ -38,9 +38,9 @@ class MofStructure(Structure):
         self.summary['checksum'] = 'N/A'
         #We need to set to have only one of each metal atom, and then convert to
         #a list to store as JSON (JSON does not support sets)
-        metal_set = set([s for s in self.species_str if ap.check_if_metal(s)])
+        metal_set = set([s for s in self.species_str if Atom(s).is_metal])
         non_metal_set = set([s for s in self.species_str
-                             if not ap.check_if_metal(s)])
+                             if not Atom(s).is_metal])
         self.summary['metal_species'] = list(metal_set)
         self.summary['non_metal_species'] = list(non_metal_set)
         self.summary['name'] = name
@@ -56,7 +56,7 @@ class MofStructure(Structure):
 
         self.metal_indexes = []
         self.all_distances = None
-        self.max_bond = ap().get_max_bond()
+        self.max_bond = Atom().max_bond
 
     @classmethod
     def from_file(cls, filename, primitive=False, sort=False, merge_tol=0.0):
@@ -96,7 +96,7 @@ class MofStructure(Structure):
         self.organic = Structure(self.lattice, [], [])
         i = 0
         for s, fc in zip(self.species, self.frac_coords):
-            if ap.check_if_metal(str(s)):
+            if Atom(str(s)).is_metal:
                 self.metal.append(s, fc)
                 self.metal_indexes.append(i)
             else:
@@ -128,12 +128,14 @@ class MofStructure(Structure):
 
         c_sphere_indices = [center]
         s_center = self.species_str[center]
+        # valid_dists = [(i, dis) for i, dis in enumerate(dist) if i != center
+        #                and dis <= self.max_bond]
         valid_dists = [(i, dis) for i, dis in enumerate(dist) if i != center
-                       and dis <= self.max_bond]
+                       and dis <= Atom(s_center).max_bond(self.species_str[i])]
         for i, dis in valid_dists:
             species_two = self.species_str[i]
-            bond_tol = ap.get_bond_tolerance(s_center, species_two)
-            if ap.bond_check(s_center, species_two, dis, bond_tol):
+            bond_tol = Atom(s_center).bond_tolerance(species_two)
+            if Atom(s_center).check_bond(species_two, dis, bond_tol):
                 c_sphere_indices.append(i)
         # TODO remove extra atoms from coordination sphere after keeping only valid bonds
         return c_sphere_indices
@@ -150,8 +152,7 @@ class MofStructure(Structure):
         cs_i = self.find_coord_sphere_indices(center, dist)
         for i in cs_i[1:]:
             c_sphere.append(self.species_str[i], self.frac_coords[i])
-
-        c_sphere = ap.keep_valid_bonds(c_sphere, 0)
+        c_sphere.keep_valid_bonds()
 
         # ligands.insert(0, structure.species[center], structure.frac_coords[center])
         c_sphere = self.center_around_metal(c_sphere)
@@ -332,7 +333,7 @@ class MetalSite(Structure):
 
         num_l = self.num_sites - 1
         min_coordination = 3
-        if ap.is_lanthanide_or_actinide(str(self.species[0])):
+        if Atom(str(self.species[0])).is_lanthanide_or_actinide:
             min_coordination = 5
 
         if num_l < min_coordination:
@@ -529,6 +530,64 @@ class MetalSite(Structure):
         output_fname = output_folder
         output_fname += '/first_coordination_sphere'+str(index)+'.cif'
         self.to(filename=output_fname)
+
+    def keep_valid_bonds(self):
+        if len(self) == 0:
+            return
+        all_dists = self.lattice.get_all_distances(self.frac_coords, self.frac_coords)
+        for l, fc in enumerate(self.frac_coords):
+            if l == 0:
+                continue
+            dist = self.lattice.get_all_distances(fc, self.frac_coords)
+            # for d1,d2 in zip(all_dists[l], dist[0]):
+            #     print(d1,d2)
+            #     input()
+            # print(all_dists[l], dist)
+            for i, dis in enumerate(dist[0]):
+                if i == l or i == 0:
+                    continue
+                if not self.is_valid(l, i, dis):
+                    index_to_remove = self.index_closer_to_center(l, i)
+                    dist_il = [all_dists[l][0], all_dists[i][0]]
+                    if len(set(dist_il)) == 1:
+                        index_to_remove_ = i
+                    else:
+                        index_to_remove_ = [l, i][dist_il.index(max(dist_il))]
+                    assert index_to_remove == index_to_remove_
+                    self.remove_sites([index_to_remove])
+                    # print('found invalid bond')
+                    # input()
+                    return self.keep_valid_bonds()
+        return
+
+    def index_closer_to_center(self, l, i):
+        lat = self.lattice
+        dist_l = lat.get_all_distances(self.frac_coords[l],
+                                       self.frac_coords[0])[0]
+        dist_i = lat.get_all_distances(self.frac_coords[i],
+                                       self.frac_coords[0])[0]
+        # print(";;", dist_l, dist_i, dist_l == dist_i)
+        # input()
+        if dist_i > dist_l:
+            return i
+        if dist_i < dist_l:
+            return l
+        if dist_i == dist_l:
+            return i
+
+    def is_valid(self, l, i, dis):
+        center = str(self.species[0])
+        species_one = str(self.species[l])
+        species_two = str(self.species[i])
+        tol = Atom(species_one).bond_tolerance(species_two)
+        if Atom(species_one).is_metal and Atom(species_two).is_metal:
+            if species_one == center and species_two == center:
+                return True
+        if species_one == 'C' and species_two == 'C':
+            return True
+        if Atom(species_one).check_bond(species_two, dis, tol):
+            return False
+        return True
 
 
 class Helper:
