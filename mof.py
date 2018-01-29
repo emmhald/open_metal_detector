@@ -10,57 +10,83 @@ import os
 import shutil
 import hashlib
 import datetime
+import math
 
 
 class MofStructure(Structure):
+    """Extend the pymatgen Structure class to add MOF specific features"""
 
-    def __init__(self, lattice, species, coords, charge=None, validate_proximity=False,
-                 to_unit_cell=False, coords_are_cartesian=False,
-                 site_properties=None, name="N/A"):
-        super(Structure, self).__init__(lattice, species, coords,
-                                        charge=charge,
-                                        validate_proximity=validate_proximity,
-                                        to_unit_cell=to_unit_cell,
-                                        coords_are_cartesian=coords_are_cartesian,
-                                        site_properties=site_properties)
+    def __init__(self, lattice, species, coords, charge=None,
+                 validate_proximity=False, to_unit_cell=False,
+                 coords_are_cartesian=False, site_properties=None, name="N/A"):
+
+        """Create a MOf structure. The arguments are the same as in the
+        pymatgen Structure class with the addition of the name argument.
+        The super constructor is called and additional MOF specific properties
+        are initialized.
+
+        :param name: MOF name, used to identify the structure.
+        """
+        super().__init__(lattice, species, coords,
+                         charge=charge,
+                         validate_proximity=validate_proximity,
+                         to_unit_cell=to_unit_cell,
+                         coords_are_cartesian=coords_are_cartesian,
+                         site_properties=site_properties)
+
+        self._all_coord_spheres_indices = None
+        self._all_distances = None
+        self._metal_coord_spheres = []
+        self._name = name
         self.metal = None
+        self.metal_indices = []
         self.organic = None
-        self.metal_coord_spheres = None
-        self.all_coord_spheres_indices = None
         self.species_str = [str(s) for s in self.species]
 
-        self.summary = dict()
-        self.summary['cif_okay'] = 'N/A'
-        self.summary['problematic'] = 'N/A'
-        self.summary['has_oms'] = 'N/A'
-        self.summary['metal_sites'] = []
-        self.summary['oms_density'] = 'N/A'
-        self.summary['checksum'] = 'N/A'
-        #We need to set to have only one of each metal atom, and then convert to
-        #a list to store as JSON (JSON does not support sets)
         metal_set = set([s for s in self.species_str if Atom(s).is_metal])
         non_metal_set = set([s for s in self.species_str
                              if not Atom(s).is_metal])
-        self.summary['metal_species'] = list(metal_set)
-        self.summary['non_metal_species'] = list(non_metal_set)
-        self.summary['name'] = name
-        self.summary['uc_volume'] = self.volume
-        self.summary['density'] = self.density
-        self.summary['date_created'] = str(datetime.datetime.now().isoformat())
-
-        self.tolerance = dict()
-        self.tolerance['plane'] = 25  # 30 # 35
-        self.tolerance['plane_5l'] = 25  # 30
-        self.tolerance['tetrahedron'] = 10
-        self.tolerance['plane_on_metal'] = 12.5
-
-        self.metal_indexes = []
-        self.all_distances = None
-        self.max_bond = Atom().max_bond
+        todays_date = datetime.datetime.now().isoformat()
+        self.summary = {'cif_okay': 'N/A',
+                        'problematic': 'N/A',
+                        'has_oms': 'N/A',
+                        'metal_sites': [],
+                        'oms_density': 'N/A',
+                        'checksum': 'N/A',
+                        'metal_species': list(metal_set),
+                        'non_metal_species': list(non_metal_set),
+                        'name': name,
+                        'uc_volume': self.volume,
+                        'density': self.density,
+                        'date_created': str(todays_date)}
+        
+        self._tolerance = None
+        self._split_structure_to_organic_and_metal()
 
     @classmethod
     def from_file(cls, filename, primitive=False, sort=False, merge_tol=0.0):
+        """Create a MofStructure from a CIF file.
+
+        This makes use of the from_file function of the Structure class and
+        catches the exception in case a CIF file cannot be read.
+        If the CIF is read successfully then the MofStructure is marked as okay,
+        and the file checksum is added to the summary. If the CIF file cannot be
+        read then it is marked as not okay and all the other properties are
+        set to None and because there cannot be an empty Structure a carbon atom
+        is added as placeholder at 0,0,0.
+
+        :param filename: (str) The filename to read from.
+        :param primitive: (bool) Whether to convert to a primitive cell
+        Only available for cifs. Defaults to False.
+        :param sort: (bool) Whether to sort sites. Default to False.
+        :param merge_tol: (float) If this is some positive number, sites that
+        are within merge_tol from each other will be merged. Usually 0.01
+        should be enough to deal with common numerical issues.
+        :return: Return the created MofStructure
+        """
         mof_name = os.path.splitext(os.path.basename(filename))[0]
+        # s = Structure.from_file(filename, primitive=primitive, sort=sort,
+        #                         merge_tol=merge_tol)
         try:
             s = Structure.from_file(filename, primitive=primitive, sort=sort,
                                     merge_tol=merge_tol)
@@ -68,7 +94,7 @@ class MofStructure(Structure):
             s_mof.summary['cif_okay'] = True
             s_mof.summary['checksum'] = Helper.get_checksum(filename)
         except Exception as e:
-            print('\nAn Exception occured: {}'.format(e))
+            print('\nAn Exception occurred: {}'.format(e))
             print('Cannot load {}\n'.format(filename))
             # Make a placeholder MOF object, set all its summary entries
             # to None and set cif_okay to False
@@ -79,162 +105,201 @@ class MofStructure(Structure):
 
         return s_mof
 
+    def analyze_metals(self, output_folder, verbose='normal'):
+        """Run analysis to detect all open metal sites in a MofStructure. In
+        addition the metal sites are marked as unique.
+
+        :param output_folder: Folder where OMS analysis results will be stored.
+        :param verbose: Verbosity level for the output of the analysis.
+        """
+
+        Helper.make_folder(output_folder)
+        running_indicator = output_folder + "/analysis_running"
+        open(running_indicator, 'w').close()
+
+        self.summary['problematic'] = False
+
+        ms_cs_list = {True: [], False: []}
+        for m, omc in enumerate(self.metal_coord_spheres):
+            m_index = self.metal_indices[m]
+            omc.check_if_open()
+            if not self.summary['problematic']:
+                self.summary['problematic'] = omc.is_problematic
+
+            cs = self._find_coordination_sequence(m_index)
+            omc.is_unique = self._check_if_new_site(ms_cs_list[omc.is_open], cs)
+            if omc.is_unique:
+                ms_cs_list[omc.is_open].append(cs)
+
+            self.summary['metal_sites'].append(omc.metal_summary)
+
+        unique_sites = [s['unique'] for s in self.summary['metal_sites']]
+        open_sites = [s['is_open'] for s in self.summary['metal_sites']]
+
+        self.summary['oms_density'] = sum(unique_sites) / self.volume
+        self.summary['has_oms'] = any(open_sites)
+
+        self.write_results(output_folder, verbose)
+        os.remove(running_indicator)
+
+    def write_results(self, output_folder, verbose='normal'):
+        """Store summary dictionary holding all MOF and OMS information to a
+        JSON file, store CIF files for the metal and non-metal parts of the MOF
+        as well as all the identified coordination spheres.
+
+        :param output_folder: Location to be used to store
+        :param verbose: Verbosity level (default: 'normal')
+        """
+        Helper.make_folder(output_folder)
+        for index, mcs in enumerate(self.metal_coord_spheres):
+            mcs.write_cif_file(output_folder, index)
+        if self.metal:
+            output_fname = "{}/{}_metal.cif".format(output_folder,
+                                                    self.summary['name'])
+            self.metal.to(filename=output_fname)
+        output_fname = "{}/{}_organic.cif".format(output_folder,
+                                                  self.summary['name'])
+        self.organic.to(filename=output_fname)
+
+        json_file_out = "{}/{}.json".format(output_folder, self.summary['name'])
+        summary = copy.deepcopy(self.summary)
+        if verbose == 'normal':
+            for ms in summary["metal_sites"]:
+                ms.pop('all_dihedrals', None)
+                ms.pop('min_dihedral', None)
+        with open(json_file_out, 'w') as outfile:
+            json.dump(summary, outfile, indent=3)
+
+    @property
+    def tolerance(self):
+        """Tolerance values for dihedral checks. If not set, defaults are given.
+        """
+        if self._tolerance is None:
+            # Set plane_on_metal tol. to 12.5 so that ferocene type
+            # coordination spheres are detected correctly. eg. BUCROH
+            self._tolerance = {'plane': 25,  # 30 # 35
+                               'plane_5l': 25,  # 30
+                               'tetrahedron': 10,
+                               'plane_on_metal': 12.5}
+        return self._tolerance
+
+    @property
+    def name(self):
+        """Name of the MofStructure."""
+        return self._name
+
+    @name.setter
+    def name(self, name):
+        """Setter for the name of the MofStructure."""
+        self._name = name
+        self.summary['name'] = name
+
+    @property
+    def all_distances(self):
+        """Distances between all atoms in the MofStructure"""
+        if self._all_distances is None:
+            self._all_distances = self.lattice.get_all_distances(
+                self.frac_coords, self.frac_coords)
+        return self._all_distances
+
+    @property
+    def all_coord_spheres_indices(self):
+        """Compute the indices of the atoms in the first coordination shell
+        for all atoms in the MofStructure
+        """
+        if self._all_coord_spheres_indices:
+            return self._all_coord_spheres_indices
+
+        self._all_coord_spheres_indices = [self._find_cs_indices(i)
+                                           for i in range(len(self))]
+        return self._all_coord_spheres_indices
+
+    @property
+    def metal_coord_spheres(self):
+        """For all metal atoms in a MofStructure compute the first coordination
+        sphere as a MetalSite object.
+        """
+        if not self._metal_coord_spheres:
+            self._metal_coord_spheres = [self._find_metal_coord_sphere(c)
+                                         for c in self.metal_indices]
+        return self._metal_coord_spheres
+
     def _mark_failed_to_read(self):
-        # for key in self.summary:
-        #     if key not in ['material_name']:
-        #         self.summary[key] = None
+        """If a CIF cannot be read set certain properties to None"""
         self.summary['metal_species'] = None
         self.summary['non_metal_species'] = None
         self.summary['uc_volume'] = None
         self.summary['density'] = None
 
-    def set_name(self, name):
-        self.summary['name'] = name
-
-    def split_structure_to_organic_and_metal(self):
+    def _split_structure_to_organic_and_metal(self):
+        """Split a MOF to two pymatgen Structures, one containing only metal
+         atoms and one containing only non-metal atoms."""
         self.metal = Structure(self.lattice, [], [])
         self.organic = Structure(self.lattice, [], [])
         i = 0
         for s, fc in zip(self.species, self.frac_coords):
             if Atom(str(s)).is_metal:
                 self.metal.append(s, fc)
-                self.metal_indexes.append(i)
+                self.metal_indices.append(i)
             else:
                 self.organic.append(s, fc)
             i += 1
 
-    def find_metal_coord_spheres(self):
-        centers = self.metal
-        coord_spheres = []
-        for i, c in enumerate(centers):
-            c_index = self.metal_indexes[i]
-            coord_spheres.append(self.find_coord_sphere(c_index))
-        self.metal_coord_spheres = coord_spheres
+    def _find_cs_indices(self, center):
+        """Find the indices of the atoms in the coordination sphere.
 
-    def compute_distances(self):
-        self.all_distances = self.lattice.get_all_distances(self.frac_coords,
-                                                            self.frac_coords)
-
-    def find_all_coord_sphere_indices(self):
-        dist_all = self.all_distances
-        self.all_coord_spheres_indices = []
-        for a in range(0, len(self)):
-            cs_i = self.find_coord_sphere_indices(a, dist_all[a])
-            self.all_coord_spheres_indices.append(cs_i)
-
-    def find_coord_sphere_indices(self, center, dist):
+        :param center: Central atom of coordination sphere.
+        :return: c_sphere_indices: Return in the coordination sphere of center.
+        """
+        dist = list(self.all_distances[center])
         if dist[center] > 0.0000001:
             sys.exit('The self distance appears to be non-zero')
 
-        c_sphere_indices = [center]
-        s_center = self.species_str[center]
-        # valid_dists = [(i, dis) for i, dis in enumerate(dist) if i != center
-        #                and dis <= self.max_bond]
-        valid_dists = [(i, dis) for i, dis in enumerate(dist) if i != center
-                       and dis <= Atom(s_center).max_bond(self.species_str[i])]
-        for i, dis in valid_dists:
-            species_two = self.species_str[i]
-            bond_tol = Atom(s_center).bond_tolerance(species_two)
-            if Atom(s_center).check_bond(species_two, dis, bond_tol):
-                c_sphere_indices.append(i)
-        # TODO remove extra atoms from coordination sphere after keeping only valid bonds
+        a = Atom(self.species_str[center])
+        c_sphere_indices = [i for i, dis in enumerate(dist)
+                            if i != center
+                            and a.check_bond(self.species_str[i], dis)]
+        c_sphere_indices.insert(0, center)
         return c_sphere_indices
 
-    def find_coord_sphere(self, center):
+    def _find_metal_coord_sphere(self, center):
+        """Identify the atoms in the first coordination sphere of a metal atom.
+
+        Obtain all atoms connecting to the metal using the
+        all_coord_spheres_indices values and keeping only valid bonds as well as
+        center the atoms around the metal center for visualization purposes.
+
+        :param center:
+        :return:
+        """
         dist = self.all_distances[center]
         if dist[center] > 0.0000001:
             sys.exit('The self distance appears to be non-zero')
 
         c_sphere = MetalSite(self.lattice, [self.species[center]],
-                                           [self.frac_coords[center]],
+                             [self.frac_coords[center]],
                              tolerance=self.tolerance)
 
-        cs_i = self.find_coord_sphere_indices(center, dist)
+        cs_i = self.all_coord_spheres_indices[center]
         for i in cs_i[1:]:
             c_sphere.append(self.species_str[i], self.frac_coords[i])
         c_sphere.keep_valid_bonds()
-
-        # ligands.insert(0, structure.species[center], structure.frac_coords[center])
-        c_sphere = self.center_around_metal(c_sphere)
+        c_sphere.center_around_metal()
         return c_sphere
 
-    def center_around_metal(self, coordination_sphere):
-        gc = coordination_sphere.lattice.get_cartesian_coords
-        center = coordination_sphere.frac_coords[0]
-        center_cart_coords = gc(center)
-        for i in range(1, coordination_sphere.num_sites):
-            c_i = coordination_sphere.frac_coords[i]
-            dist_vector = center - c_i
-            dist_vector_r = []
-            for j in range(0, 3):
-                dist_vector_r.append(round(dist_vector[j]))
-            dist_before = np.linalg.norm(center_cart_coords - gc(c_i))
-            c_i_centered = c_i + dist_vector_r
-            dist_after = np.linalg.norm(center_cart_coords - gc(c_i_centered))
-            if dist_after > dist_before:
-                for j in range(0, 3):
-                    dist_vector_r[j] = np.rint(dist_vector[j])
-                c_i_centered = c_i + dist_vector_r
-                if dist_after > dist_before:
-                    c_i_centered = c_i
-            coordination_sphere.replace(i, coordination_sphere.species[i],
-                                        c_i_centered)
-        return coordination_sphere
-
-    def analyze_metals(self, output_folder=None, output_level='normal'):
-        if output_folder is not None:
-            Helper.make_folder(output_folder)
-            running_ = output_folder + "/analysis_running"
-            open(running_, 'w').close()
-
-        self.compute_distances()
-        self.split_structure_to_organic_and_metal()
-        self.find_metal_coord_spheres()
-        self.find_all_coord_sphere_indices()
-        self.summary['problematic'] = False
-        oms_cs_list = []  # list of coordination sequences for each open metal found
-        cms_cs_list = []  # list of coordination sequences for each closed metal found
-        # cs_list = []
-        for m, omc in enumerate(self.metal_coord_spheres):
-            m_index = self.metal_indexes[m]
-
-            omc.check_if_open()
-            self.summary['metal_sites'].append(omc.site_summary)
-            if omc.is_problematic:
-                self.summary['problematic'] = True
-
-            cs = self.find_coordination_sequence(m_index)
-
-            if omc.is_open:
-                cs_list = oms_cs_list
-            else:
-                cs_list = cms_cs_list
-
-            if self.check_if_new_site(cs_list, cs):
-                self.summary['metal_sites'][-1]['unique'] = True
-                cs_list.append(cs)
-
-        unique_sites = [1 for s in self.summary['metal_sites'] if s['unique']]
-        open_sites = [s['is_open'] for s in self.summary['metal_sites']]
-
-        self.summary['oms_density'] = sum(unique_sites) / self.volume
-        self.summary['has_oms'] = any(open_sites)
-        if output_folder is not None:
-            self.write_results(output_folder, output_level)
-            os.remove(running_)
-        return self.summary
-
-    def check_if_new_site(self, cs_list, cs):
+    @staticmethod
+    def _check_if_new_site(cs_list, cs):
         """Check if a given site is unique based on its coordination sequence"""
-        for i, cs_i in enumerate(cs_list):
+        for cs_i in cs_list:
             if Helper.compare_lists(cs_i, cs):
-                return False  #i,
-        return True  #len(cs_list),
+                return False
+        return True  # len(cs_list),
 
-    def find_coordination_sequence(self, center):
-        """computes the coordination sequence up to the Nth coordination shell
-        as input it takes the MOF as a pymatgen Structure and the index of the
-        center metal in the Structure
+    def _find_coordination_sequence(self, center):
+        """Compute the coordination sequence up to the 6th coordination shell.
+
+        :param center: Atom to compute coordination sequence for
+        :return cs: Coordination sequence for center
         """
 
         shell_list = {(center, (0, 0, 0))}
@@ -270,91 +335,177 @@ class MofStructure(Structure):
 
         return cs
 
-    def write_results(self, output_folder, output_level):
-        Helper.make_folder(output_folder)
-        for index, mcs in enumerate(self.metal_coord_spheres):
-            mcs.write_xyz_file(output_folder, index)
-        if self.metal:
-            output_fname = "{}/{}_metal.cif".format(output_folder,
-                                                    self.summary['name'])
-            self.metal.to(filename=output_fname)
-        output_fname = "{}/{}_organic.cif".format(output_folder,
-                                                  self.summary['name'])
-        self.organic.to(filename=output_fname)
 
-        json_file_out = "{}/{}.json".format(output_folder,
-                                                  self.summary['name'])
-        summary = copy.deepcopy(self.summary)
-        if output_level == 'normal':
-            for ms in summary["metal_sites"]:
-                ms.pop('all_dihedrals', None)
-                ms.pop('min_dihedral', None)
-        with open(json_file_out, 'w') as outfile:
-            json.dump(summary, outfile, indent=3)
-
-
-class MetalSite(Structure):
+class MetalSite(MofStructure):
 
     def __init__(self, lattice, species, coords, validate_proximity=False,
                  to_unit_cell=False, coords_are_cartesian=False,
-                 site_properties=None, tolerance="default"):
-        super(Structure, self).__init__(lattice, species, coords,
-                                        validate_proximity=validate_proximity,
-                                        to_unit_cell=to_unit_cell,
-                                        coords_are_cartesian=coords_are_cartesian,
-                                        site_properties=site_properties)
-        self._sites = list(self._sites)
+                 site_properties=None, tolerance=None, name='N/A'):
+        super().__init__(lattice, species, coords,
+                         validate_proximity=validate_proximity,
+                         to_unit_cell=to_unit_cell,
+                         coords_are_cartesian=coords_are_cartesian,
+                         site_properties=site_properties,
+                         name=name)
 
-        self.site_summary = dict()
-        self.site_summary["metal"] = str(self.species[0])
-        self.site_summary["type"] = "closed"
-        self.site_summary["is_open"] = False
-        self.site_summary["unique"] = False
-        self.site_summary["problematic"] = False
-        if tolerance == 'default':
-            self.tolerance = dict()
-            self.tolerance['plane'] = 25  # 30 # 35
-            self.tolerance['plane_5l'] = 25  # 30
-            self.tolerance['tetrahedron'] = 10
-            self.tolerance['plane_on_metal'] = 12.5
-        else:
-            self.tolerance = tolerance
+        self._metal_type = "unknown"
+        self._tolerance = tolerance
+        self._is_open = None
+        self._is_unique = None
+        self._is_problematic = None
+        self._t_factor = None
+        self._min_dihedral = None
+        self._all_dihedrals = {}
 
-        self.all_dihedrals = []
-        self.all_indeces = []
-        self.all_dihedrals_m = []
-        self.all_indeces_m = []
-        self.is_open = False
-        self.is_problematic = False
+    @property
+    def all_planes(self):
+        self._all_planes = []
+        for i, j, k, l in itertools.permutations(range(self.num_sites), 4):
+            self._all_planes.append((i, j, k, l))
+        # for i, l in itertools.combinations(range(self.num_sites), 2):
+        #     for j, k in itertools.combinations(range(self.num_sites), 2):
+        #         if len({i, j, k, l}) == 4:
+        #             self._all_planes.append((i, j, k, l))
+
+        return self._all_planes
+
+    @property
+    def tolerance(self):
+        """Tolerance values for dihedral checks. If not set, defaults are given.
+        """
+        if self._tolerance is None:
+            # Set plane_on_metal tol. to 12.5 so that ferocene type
+            # coordination spheres are detected correctly. eg. BUCROH
+            self._tolerance = {'plane': 25,  # 30 # 35
+                               'plane_5l': 25,  # 30
+                               'tetrahedron': 10,
+                               'plane_on_metal': 12.5}
+        return self._tolerance
+
+    @property
+    def num_linkers(self):
+        """Number of linkers in coordination sphere of MetalSite."""
+        return self.num_sites - 1
+
+    @property
+    def is_open(self):
+        """Whether the MetalSite is open or not."""
+        return self._is_open
+
+    @property
+    def is_problematic(self):
+        """Whether the MetalSite is problematic or not."""
+        return self._is_problematic
+
+    @property
+    def is_unique(self):
+        """Whether the MetalSite is unique or not."""
+        return self._is_unique
+
+    @is_unique.setter
+    def is_unique(self, value):
+        if not isinstance(value, bool):
+            sys.exit('is_unique can only be boolean.')
+        self._is_unique = value
+
+    @property
+    def metal_type(self):
+        """The type of the metal center."""
+        return self._metal_type
+
+    @property
+    def metal_summary(self):
+        """Whether the MetalSite is problematic or not."""
+
+        _summary = {"metal": str(self.species[0]),
+                    "type": self.metal_type,
+                    "is_open": self.is_open,
+                    "unique": self.is_unique,
+                    "problematic": self.is_problematic,
+                    "number_of_linkers": self.num_linkers,
+                    "min_dihedral": 0.0,
+                    "all_dihedrals": 0.0,
+                    't_factor': self._t_factor}
+
+        return _summary
+
+    def keep_valid_bonds(self):
+        """Loop over atoms in the coordination sphere and remove any extraneous
+        sites.
+        """
+        if len(self) == 0:
+            return
+        all_dists = self.lattice.get_all_distances(self.frac_coords,
+                                                   self.frac_coords)
+        for i, j in itertools.combinations(range(1, len(self)), 2):
+            assert all_dists[i][j] == all_dists[j][i]
+            dis = all_dists[i][j]
+            if not self._valid_pair(i, j, dis):
+                dist_ij_c = [all_dists[i][0], all_dists[j][0]]
+                if len(set(dist_ij_c)) == 1:
+                    index_to_remove = i
+                else:
+                    index_to_remove = [i, j][dist_ij_c.index(max(dist_ij_c))]
+                # TODO remove this part after checking
+                # index_to_remove_ = self.index_closer_to_center(i, j)
+                # assert index_to_remove_ == index_to_remove_
+                self.remove_sites([index_to_remove])
+                return self.keep_valid_bonds()
+
+    def center_around_metal(self):
+        """Shift atoms across periodic boundary conditions to have the
+        coordination appear centered around the metal atom for visualisation
+        purposes
+        """
+        gc = self.lattice.get_cartesian_coords
+        center = self.frac_coords[0]
+        center_cart_coords = gc(center)
+        for i in range(1, self.num_sites):
+            c_i = self.frac_coords[i]
+            dist_vector = center - c_i
+            dist_vector_r = []
+            for j in range(0, 3):
+                dist_vector_r.append(round(dist_vector[j]))
+            dist_before = np.linalg.norm(center_cart_coords - gc(c_i))
+            c_i_centered = c_i + dist_vector_r
+            dist_after = np.linalg.norm(center_cart_coords - gc(c_i_centered))
+            if dist_after > dist_before:
+                for j in range(0, 3):
+                    dist_vector_r[j] = np.rint(dist_vector[j])
+                c_i_centered = c_i + dist_vector_r
+                if dist_after > dist_before:
+                    c_i_centered = c_i
+            self.replace(i, self.species[i], c_i_centered)
 
     def check_if_open(self):
-        self.site_summary["number_of_linkers"] = self.num_sites - 1
+        """Get t-factor, check if problematic based on number of linkers and
+         if necessary call to check the dihedrals to determine if the metal site
+         is open.
+         """
+
         self.get_t_factor()
 
-        num_l = self.num_sites - 1
-        min_coordination = 3
         if Atom(str(self.species[0])).is_lanthanide_or_actinide:
-            min_coordination = 5
-
-        if num_l < min_coordination:
-            self.site_summary["problematic"] = True
-
-        if num_l <= 3:  # min_cordination:
-            self.site_summary["is_open"] = True
-            self.site_summary["type"] = '3_or_less'
-            self.site_summary["min_dihedral"] = 0.0
-            self.site_summary["all_dihedrals"] = 0.0
+            self._is_problematic = self.num_linkers < 5
         else:
-            self.check_non_metal_dihedrals()
+            self._is_problematic = self.num_linkers < 3
 
-        if self.site_summary['is_open']:
-            self.is_open = True
+        self._is_open = False
+        if self.num_linkers <= 3:
+            self._mark_oms(oms_type='3_or_less')
+            return
+        else:
+            self.check_dihedrals()
 
-        if self.site_summary['problematic']:
-            self.is_problematic = True
+    def _mark_oms(self, oms_type):
+        self._metal_type = oms_type
+        self._is_open = True
 
     def get_t_factor(self):
-
+        """Compute t-factors, only meaningful for 4-,5-, and 6-coordinated
+        metals, if not the value of -1 is assigned.
+        """
+        nl = self.num_sites - 1
         index_range = range(1, self.num_sites)
         all_angles = []
         for i in itertools.combinations(index_range, 2):
@@ -362,31 +513,30 @@ class MetalSite(Structure):
             all_angles.append([angle, i[0], i[1]])
 
         all_angles.sort(key=lambda x: x[0])
-        # beta is the largest angle and alpha is the second largest angle
-        # in the coordination sphere; using the same convention as Yang et al.
-        # DOI: 10.1039/b617136b
-        if self.num_sites > 3:
+        if nl == 5 or nl == 4:
+            # beta is the largest angle and alpha is the second largest angle
+            # in the coordination sphere; using the same convention
+            # as Yang et al. DOI: 10.1039/b617136b
             beta = all_angles[-1][0]
             alpha = all_angles[-2][0]
-
-        if self.num_sites - 1 == 6:
-            max_indeces_all = all_angles[-1][1:3]
+            if nl == 4:
+                tau = self.get_t4_factor(alpha, beta)
+            else:
+                tau = self.get_t5_factor(alpha, beta)
+        elif nl == 6:
+            max_indices_all = all_angles[-1][1:3]
             l3_l4_angles = [x for x in all_angles if
-                            x[1] not in max_indeces_all and
-                            x[2] not in max_indeces_all]
-            max_indeces_all_3_4 = max(l3_l4_angles, key=lambda x: x[0])[1:3]
+                            x[1] not in max_indices_all and
+                            x[2] not in max_indices_all]
+            max_indices_all_3_4 = max(l3_l4_angles, key=lambda x: x[0])[1:3]
             l5_l6_angles = [x for x in l3_l4_angles
-                            if x[1] not in max_indeces_all_3_4 and
-                            x[2] not in max_indeces_all_3_4]
+                            if x[1] not in max_indices_all_3_4 and
+                            x[2] not in max_indices_all_3_4]
             gamma = max(l5_l6_angles, key=lambda x: x[0])[0]
             tau = self.get_t6_factor(gamma)
-        elif self.num_sites - 1 == 5:
-            tau = self.get_t5_factor(alpha, beta)
-        elif self.num_sites - 1 == 4:
-            tau = self.get_t4_factor(alpha, beta)
         else:
             tau = -1
-        self.site_summary['t_factor'] = tau
+        self._t_factor = tau
 
     @staticmethod
     def get_t4_factor(a, b):
@@ -398,196 +548,160 @@ class MetalSite(Structure):
 
     @staticmethod
     def get_t6_factor(c):
-        return c / 180
+        return c / 180.0
 
-    def check_non_metal_dihedrals(self):
-        #TODO revise this method. Simplify calculation and bookeeping
-        num_l = self.num_sites - 1
-        crit = dict()
-        tol = dict()
+    def check_dihedrals(self):
+        """Determine whether the metal site is open using the dihedral angles
+        between the atoms in the coordination sphere."""
 
-        oms_test = dict()
-        oms_test['plane'] = False
-        oms_test['same_side'] = False
-        oms_test['metal_plane'] = False
-        oms_test['3_or_less'] = False
-        oms_test['non_TD'] = False
+        crit = 180.0
+        tol = self.tolerance['plane']
 
-        crit['plane'] = 180
-        tol['plane'] = self.tolerance['plane']  # 35
-        crit['plane_5l'] = 180
-        tol['plane_5l'] = self.tolerance['plane_5l']  # 30
-        crit['tetrahedron'] = 70.528779  # 70
-        tol['tetrahedron'] = self.tolerance['tetrahedron']  # 10
+        for plane in self.all_planes:
+            i, j, k, l = plane
+            dihedral = abs(self.get_dihedral(i, j, k, l))
+            abs_d = abs(dihedral - crit * int(dihedral / 91.0))
+            if abs_d < tol:
+                oms_type = self._check_plane(i, j, k, l)
+                if oms_type:
+                    self._mark_oms(oms_type)
+                    return
 
-        if num_l == 4:
-            test_type = 'plane'  # 'tetrahedron'
-            om_type = 'non_TD'
-        elif num_l == 5:
-            test_type = 'plane_5l'
-            om_type = 'plane_5l'
-        elif num_l > 5:
-            test_type = 'plane'
-            om_type = 'same_side'
-        oms_type = ','.join([test_type, om_type])
-
-        self.obtain_dihedrals()
-        self.site_summary["min_dihedral"] = min(self.all_dihedrals)
-        self.site_summary["all_dihedrals"] = self.all_dihedrals
-
-        for dihedral, indeces in zip(self.all_dihedrals, self.all_indeces):
-            [i, j, k, l] = indeces
-            test1 = abs(dihedral - crit[test_type])
-            test2 = abs(dihedral - crit[test_type] + 180)
-            if test1 < tol[test_type] or test2 < tol[test_type]:
-                if num_l <= 5:
-                    self.site_summary["type"] = oms_type
-                    self.site_summary["is_open"] = True
-                elif num_l > 5:
-                    if self.check_if_plane_on_metal(0, [i, j, k, l]):
-                        other_i = self.find_other_indeces([0, i, j, k, l])
-                        if self.check_if_atoms_on_same_side(other_i, j, k, l):
-                            self.site_summary["type"] = oms_type
-                            self.site_summary["is_open"] = True
-
-        if (num_l >= 4) and not self.site_summary["is_open"]:
-            self.check_metal_dihedrals()
-
-    def obtain_dihedrals(self):
-        indices_1 = range(1, self.num_sites)
-        indices_2 = range(1, self.num_sites)
-        for i, l in itertools.combinations(indices_1, 2):
-            for j, k in itertools.combinations(indices_2, 2):
-                if len({i, j, k, l}) == 4:
-                    dihedral = abs(self.get_dihedral(i, j, k, l))
-                    self.all_dihedrals.append(dihedral)
-                    self.all_indeces.append([i, j, k, l])
-
-    def check_if_plane_on_metal(self, m_i, indeces):
-        crit = 180
-        # Set to 12.5 so that ferocene type coordination spheres are detected
-        # correctly. eg. BUCROH
-        tol = self.tolerance['plane_on_metal']  # 12.5
-        # tol = 25.0
-        for i in range(1, len(indeces)):
-            for j in range(1, len(indeces)):
-                for k in range(1, len(indeces)):
-                    if i == j or i == k or j == k:
-                        pass
-                    else:
-                        d = self.get_dihedral(m_i, indeces[i], indeces[j],
-                                              indeces[k])
-                        dihedral = abs(d)
-                        if abs(dihedral - crit) < tol or abs(
-                                                dihedral - crit + 180) < tol:
-                            return True
+    def _check_plane(self, i, j, k, l):
+        if self.num_linkers == 4:
+            return "4-l_plane"
+        other_i = self._find_other_indeces({0, i, j, k, l})
+        if self._check_if_plane_on_metal(0, [i, j, k, l]):
+            if self.check_if_atoms_on_same_side(other_i, i, j, k):
+                if self.check_if_atoms_on_same_side(other_i, j, k, l):
+                    return "metal_plane_atoms_same_side"
+        if 0 not in [i, j, k, l]:
+            f = self.check_if_atoms_on_same_side
+            if all([not f([0, o_i], i, j, k) for o_i in other_i]):
+                if all([not f([0, o_i], j, k, l) for o_i in other_i]):
+                    return "metal_over_plane"
         return False
 
-    def find_other_indeces(self, indeces):
-        other_indeces = []
-        for index in range(0, self.num_sites):
-            if index not in indeces:
-                other_indeces.append(index)
-        return other_indeces
-
-    def check_if_atoms_on_same_side(self, other_indeces, j, k, l):
-        dihedrals_other = []
-        for o_i in other_indeces:
-            dihedrals_other.append(self.get_dihedral(j, k, l, o_i))
-        dihedrals_p = [d > 0.0 for d in dihedrals_other]
-        dihedrals_n = [d < 0.0 for d in dihedrals_other]
-        if all(dihedrals_p) or all(dihedrals_n):
+    def _check_if_plane_on_metal(self, m_i, plane):
+        """Check if the metal atom falls on a plane formed by 4 atoms in the
+        coordination sphere.
+        :param m_i: index of metal atom.
+        :param plane: indices for 4 atoms of the coordination sphere that fall
+        on a plane.
+        :return: Whether the metal falls on plane or not (True or False).
+        """
+        crit = 180.0
+        # tol = self.tolerance['plane_on_metal']
+        tol = self.tolerance['plane']
+        if m_i in plane:
             return True
-        return False
 
-    def check_metal_dihedrals(self):
-        crit = 180
-        tol = self.tolerance['plane']  # 30
-        oms_type = ','.join([str(self.species[0]), 'metal_plane'])
-        self.obtain_metal_dihedrals()
-        number_of_planes = 0
-        for dihedral, indices in zip(self.all_dihedrals_m, self.all_indeces_m):
-            [i, j, k, l] = indices
-            if abs(dihedral - crit) < tol or abs(dihedral - crit + 180) < tol:
-                number_of_planes += 1
-                all_indices = self.find_other_indeces([0, j, k, l])
-                if self.check_if_atoms_on_same_side(all_indices, j, k, l):
-                    self.site_summary["type"] = oms_type
-                    self.site_summary["is_open"] = True
+        angles = []
+        metal_planes = [plane[0:3], plane[1:4]]
+        for mp in metal_planes:
+            i, j, k, l = tuple(mp+[m_i])
+            d = abs(self.get_dihedral(i, j, k, l))
+            abs_d = abs(d - 180 * int(d / 91.0))
+            angles.append(abs_d)
+        avg_d = sum(angles)/2
+        return abs(avg_d - crit) < tol or abs(avg_d - crit + 180) < tol
 
-    def obtain_metal_dihedrals(self):
-        indices_1 = range(1, self.num_sites)
-        i = 0
-        for l in indices_1:
-            for j, k in itertools.permutations(indices_1, 2):
-                if len({i, j, k, l}) == 4:
-                    dihedral = abs(self.get_dihedral(i, j, k, l))
-                    self.all_dihedrals_m.append(dihedral)
-                    self.all_indeces_m.append([i, j, k, l])
+    def _find_other_indeces(self, indices):
+        """Find atoms not the given set."""
+        return [i for i in range(self.num_sites) if i not in indices]
 
-    def write_xyz_file(self, output_folder, index):
+    def check_if_atoms_on_same_side(self, other_indices, i, j, k):
+        """Check whether a given set of atoms are all on the same side of a
+        given plane formed by i,j,k.
+        """
+        # keys = [(i, j, k, o_i) for o_i in other_indices]
+        # dihedrals_other = [self.get_dihedral(key) for key in keys]
+
+        d_other = [self.get_dihedral(i, j, k, o_i) for o_i in other_indices]
+
+        dihedrals_p = [d >= 0.0 for d in d_other]
+        dihedrals_n = [d < 0.0 for d in d_other]
+
+        return all(dihedrals_p) or all(dihedrals_n)
+
+    def _assign_equivalent_dihedrals(self, i, j, k, l, d):
+        keys = ((i, j, k, l), (i, k, j, l),
+                (l, j, k, i), (l, k, j, i))
+        v_s = (d, -d, -d, d)
+        for key, v in zip(keys, v_s):
+            self._all_dihedrals[key] = v
+
+    def get_dihedral(self, i, j, k, l):
+        """
+        Returns dihedral angle specified by four sites.
+
+        Args:
+            i (int): Index of first site
+            j (int): Index of second site
+            k (int): Index of third site
+            l (int): Index of fourth site
+
+        Returns:
+            (float) Dihedral angle in degrees.
+        """
+        key = (i, j, k, l)
+        if key in self._all_dihedrals:
+            return self._all_dihedrals[key]
+        dihedral = self.get_dihedral_from_coords(self[i].coords, self[j].coords,
+                                                 self[k].coords, self[l].coords)
+        self._assign_equivalent_dihedrals(i, j, k, l, dihedral)
+        return dihedral
+
+    @staticmethod
+    def get_dihedral_from_coords(c1, c2, c3, c4):
+        v1 = c3 - c4
+        v2 = c2 - c3
+        v3 = c1 - c2
+        v23 = np.cross(v2, v3)
+        v12 = np.cross(v1, v2)
+        nom = np.linalg.norm(v2) * np.dot(v1, v23)
+        denom = np.dot(v12, v23)
+        if abs(nom) < 1e-10 and abs(denom) < 1e-10:
+            dihedral = 0.0
+        else:
+            dihedral = math.degrees(math.atan2(nom, denom))
+        return dihedral
+
+    def write_cif_file(self, output_folder, index):
+        """Write MofSite to specified output_folder as a CIF file and use index
+        to name it.
+        """
         Helper.make_folder(output_folder)
         output_fname = output_folder
         output_fname += '/first_coordination_sphere'+str(index)+'.cif'
         self.to(filename=output_fname)
 
-    def keep_valid_bonds(self):
-        if len(self) == 0:
-            return
-        all_dists = self.lattice.get_all_distances(self.frac_coords, self.frac_coords)
-        for l, fc in enumerate(self.frac_coords):
-            if l == 0:
-                continue
-            dist = self.lattice.get_all_distances(fc, self.frac_coords)
-            # for d1,d2 in zip(all_dists[l], dist[0]):
-            #     print(d1,d2)
-            #     input()
-            # print(all_dists[l], dist)
-            for i, dis in enumerate(dist[0]):
-                if i == l or i == 0:
-                    continue
-                if not self.is_valid(l, i, dis):
-                    index_to_remove = self.index_closer_to_center(l, i)
-                    dist_il = [all_dists[l][0], all_dists[i][0]]
-                    if len(set(dist_il)) == 1:
-                        index_to_remove_ = i
-                    else:
-                        index_to_remove_ = [l, i][dist_il.index(max(dist_il))]
-                    assert index_to_remove == index_to_remove_
-                    self.remove_sites([index_to_remove])
-                    # print('found invalid bond')
-                    # input()
-                    return self.keep_valid_bonds()
-        return
+    def _valid_pair(self, i, j, dis):
+        """Determine whether two atoms in the coordination sphere form a valid
+        pair.
 
-    def index_closer_to_center(self, l, i):
-        lat = self.lattice
-        dist_l = lat.get_all_distances(self.frac_coords[l],
-                                       self.frac_coords[0])[0]
-        dist_i = lat.get_all_distances(self.frac_coords[i],
-                                       self.frac_coords[0])[0]
-        # print(";;", dist_l, dist_i, dist_l == dist_i)
-        # input()
-        if dist_i > dist_l:
-            return i
-        if dist_i < dist_l:
-            return l
-        if dist_i == dist_l:
-            return i
+        A pair is not valid if it forms a bond unless both atoms are metals of
+        the same kind as the center or both atoms are carbon atoms (e.g. in the
+        case of a ferocene type coordination sphere).
 
-    def is_valid(self, l, i, dis):
-        center = str(self.species[0])
-        species_one = str(self.species[l])
-        species_two = str(self.species[i])
-        tol = Atom(species_one).bond_tolerance(species_two)
-        if Atom(species_one).is_metal and Atom(species_two).is_metal:
-            if species_one == center and species_two == center:
-                return True
-        if species_one == 'C' and species_two == 'C':
-            return True
-        if Atom(species_one).check_bond(species_two, dis, tol):
-            return False
-        return True
+        :param i:
+        :param j:
+        :param dis:
+        :return:
+        """
+        s_one = str(self.species[i])
+        s_two = str(self.species[j])
+        a_one = Atom(s_one)
+        a_two = Atom(s_two)
+
+        bond = a_one.check_bond(s_two, dis, a_one.bond_tolerance(s_two))
+
+        same_atoms = s_one == s_two == str(self.species[0])
+        two_same_metals = same_atoms and a_one.is_metal and a_two.is_metal
+
+        carbon_atoms = s_one == s_two == 'C'
+
+        return (not bond) or two_same_metals or carbon_atoms
 
 
 class Helper:
@@ -614,7 +728,6 @@ class Helper:
 
     @classmethod
     def get_checksum(cls, filename):
-        # print(type(hashlib.sha256(open(filename, 'rb').read()).digest()))
-        # print(str(hashlib.sha256(open(filename, 'rb').read()).digest()))
-        # print(hashlib.sha256(open(filename, 'rb').read()).digest())
-        return hashlib.sha256(open(filename, 'rb').read()).hexdigest()
+        with open(filename, 'rb') as f:
+            file = f.read()
+        return hashlib.sha256(file).hexdigest()
