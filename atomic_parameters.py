@@ -1,7 +1,13 @@
 
 class Atom:
+    """A class to hold atomic information, and check bonds."""
 
-    def __init__(self, element='H'):
+    def __init__(self, element):
+        """Create an Atom object given an element.
+
+        :param element: Element of the Atom object. This determines it's
+        properties.
+        """
         # Covalent radii taken from DOI: Covalent radii revisited
         # Beatriz Cordero,   Verónica Gómez,   Ana E. Platero-Prats,
         # Marc Revés,   Jorge Echeverría,  Eduard Cremades, Flavia Barragána
@@ -128,54 +134,62 @@ class Atom:
 
     @property
     def co(self):
+        """Coordination radius."""
         return self._co
 
     @property
     def is_metal(self):
+        """Check if atom is metal or not."""
         return self.element not in self._list_of_non_metals
 
     @property
     def is_lanthanide_or_actinide(self):
+        """Check if atom is a lanthanide or actinide."""
         return self.is_lanthanide or self.is_actinide
 
     @property
     def is_lanthanide(self):
+        """Check if atom is a lanthanide."""
         return 72 > self.atomic_number > 56
 
     @property
     def is_actinide(self):
+        """Check if atom is a actinide."""
         return 97 > self.atomic_number > 88
 
     def bond_tolerance(self, ele2):
+        """Determine if atom is a actinide."""
         if self._check_if_heavy_metal_bond(ele2):
             return 0.2
         else:
             return 0.5  # 0.4
 
     def _check_if_heavy_metal_bond(self, ele2):
+        """Determine if atom is a actinide."""
         return self.is_heavy_metal or Atom(ele2).is_heavy_metal
 
     @property
     def is_heavy_metal(self):  # \m/
+        """Determine if atom has a covelant radii larger than 1.95."""
         return self.co > 1.95
 
     def check_bond(self, ele2, dist, bond_tol=None):
-        #bond = dist #- get_sum_of_cov_radii(ele1,ele2)
+        """Check if the atom is bonded with a given atom"""
+        max_bond = self.max_bond(ele2, bond_tol)
+        return dist < max_bond
+
+    def max_bond(self, ele2, bond_tol=None):
+        """Get the maximum possible distance between the Atom object and
+        another atom of type ele2.
+
+        Returns the some of covelant radii for Atom and Atom(ele2) plus their
+        covalant radii.
+
+        :param bond_tol: Bold tolerance to use, if not set then the default will
+        be used.
+        :param ele2: Element of the atom that the max_bond corresponds to.
+        :return:
+        """
         if bond_tol is None:
             bond_tol = self.bond_tolerance(ele2)
-        cov_radii_sum = self.co + Atom(ele2).co
-        up_bound = cov_radii_sum + bond_tol
-        low_bound = cov_radii_sum - bond_tol
-        #if bond < bond_tol and abs(dist) > 0:
-        return dist < up_bound #and dist > low_bound: # and abs(dist) > 0:
-
-    def max_bond(self, ele2):
-        """Get the maximum possible distance
-        Get the maximum possible covalent radius, multilpy by 1.1 to be safe
-        and compute the maximum bond distance as twice that plus the maximum
-        tolerance
-        """
-        max_co = max([self._co_all[k] for k in self._co_all])*1.1
-        return max_co + self.co + self.bond_tolerance(ele2)
-        # return max_co*2.0 + 0.5   #0.4
-
+        return Atom(ele2).co + self.co + bond_tol
