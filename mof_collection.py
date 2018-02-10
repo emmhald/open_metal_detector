@@ -219,6 +219,18 @@ class MofCollection:
         print(msg[min(1, len(not_read))])
         for i, mi in enumerate(not_read):
             print("{}".format(mi['mof_name']))
+
+        mofs_no_metal = [mi for mi in self.mof_coll
+                         if len(self.properties[mi['checksum']]['metal_sites'])
+                         == 0]
+        msg = {0: "\r", 1: "\nThe following structures contain no metal:"}
+        print(msg[min(1, len(mofs_no_metal))])
+        for mi in mofs_no_metal:
+            p = self.properties[mi['checksum']]
+            assert len(p['metal_species']) == 0
+            print("{}.cif {}".format(p['name'],
+                                     p['metal_species']+p['non_metal_species']))
+
         print('\nFinished checking structures.')
 
     def check_analysis_status(self):
@@ -477,7 +489,13 @@ class MofCollection:
             if checksum not in self.properties:
                 self.properties[checksum] = {"mof_name": mof_name}
             else:
-                assert self.properties[checksum]["mof_name"] == mof_name
+                if self.properties[checksum]["mof_name"] != mof_name:
+                    exit("MOF name and CIF checksum missmatch for {}.cif "
+                         "{}.cif. Either the CIF files has already been "
+                         "processed with a different name, or the CIF file "
+                         "has changed since it was processed."
+                         "".format(mof_name,
+                                   self.properties[checksum]['mof_name']))
             if self._check_if_results_exist(mof_name):
                 self._compare_checksums(mof_file, mof_name, checksum)
 
