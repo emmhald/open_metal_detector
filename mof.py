@@ -85,8 +85,6 @@ class MofStructure(Structure):
         :return: Return the created MofStructure
         """
         mof_name = os.path.splitext(os.path.basename(filename))[0]
-        # s = Structure.from_file(filename, primitive=primitive, sort=sort,
-        #                         merge_tol=merge_tol)
         try:
             s = Structure.from_file(filename, primitive=primitive, sort=sort,
                                     merge_tol=merge_tol)
@@ -175,12 +173,7 @@ class MofStructure(Structure):
         """Tolerance values for dihedral checks. If not set, defaults are given.
         """
         if self._tolerance is None:
-            # Set plane_on_metal tol. to 12.5 so that ferocene type
-            # coordination spheres are detected correctly. eg. BUCROH
-            self._tolerance = {'plane': 25,  # 30 # 35
-                               'plane_5l': 25,  # 30
-                               'tetrahedron': 10,
-                               'plane_on_metal': 12.5}
+            self._tolerance = {'on_plane': 15}
         return self._tolerance
 
     @property
@@ -358,28 +351,11 @@ class MetalSite(MofStructure):
         self._all_dihedrals = {}
 
     @property
-    def all_planes(self):
-        self._all_planes = []
-        for i, j, k, l in itertools.permutations(range(self.num_sites), 4):
-            self._all_planes.append((i, j, k, l))
-        # for i, l in itertools.combinations(range(self.num_sites), 2):
-        #     for j, k in itertools.combinations(range(self.num_sites), 2):
-        #         if len({i, j, k, l}) == 4:
-        #             self._all_planes.append((i, j, k, l))
-
-        return self._all_planes
-
-    @property
     def tolerance(self):
         """Tolerance values for dihedral checks. If not set, defaults are given.
         """
         if self._tolerance is None:
-            # Set plane_on_metal tol. to 12.5 so that ferocene type
-            # coordination spheres are detected correctly. eg. BUCROH
-            self._tolerance = {'plane': 25,  # 30 # 35
-                               'plane_5l': 25,  # 30
-                               'tetrahedron': 10,
-                               'plane_on_metal': 12.5}
+            self._tolerance = {'on_plane': 15}
         return self._tolerance
 
     @property
@@ -446,9 +422,6 @@ class MetalSite(MofStructure):
                     index_to_remove = i
                 else:
                     index_to_remove = [i, j][dist_ij_c.index(max(dist_ij_c))]
-                # TODO remove this part after checking
-                # index_to_remove_ = self.index_closer_to_center(i, j)
-                # assert index_to_remove_ == index_to_remove_
                 self.remove_sites([index_to_remove])
                 return self.keep_valid_bonds()
 
@@ -491,11 +464,13 @@ class MetalSite(MofStructure):
             self._is_problematic = self.num_linkers < 3
 
         self._is_open = False
+        self._metal_type = "Closed"
         if self.num_linkers <= 3:
             self._mark_oms(oms_type='3_or_less')
             return
         else:
-            self.check_dihedrals()
+            # 0 should always correspond to the
+            self._check_planes(0)
 
     def _mark_oms(self, oms_type):
         self._metal_type = oms_type
@@ -550,123 +525,6 @@ class MetalSite(MofStructure):
     def get_t6_factor(c):
         return c / 180.0
 
-    def check_dihedrals(self):
-        """Determine whether the metal site is open using the dihedral angles
-        between the atoms in the coordination sphere."""
-
-        crit = 180.0
-        tol = self.tolerance['plane']
-
-        for plane in self.all_planes:
-            i, j, k, l = plane
-            dihedral = abs(self.get_dihedral(i, j, k, l))
-            abs_d = abs(dihedral - crit * int(dihedral / 91.0))
-            if abs_d < tol:
-                oms_type = self._check_plane(i, j, k, l)
-                if oms_type:
-                    self._mark_oms(oms_type)
-                    return
-
-    def _check_plane(self, i, j, k, l):
-        if self.num_linkers == 4:
-            return "4-l_plane"
-        other_i = self._find_other_indeces({0, i, j, k, l})
-        if self._check_if_plane_on_metal(0, [i, j, k, l]):
-            if self.check_if_atoms_on_same_side(other_i, i, j, k):
-                if self.check_if_atoms_on_same_side(other_i, j, k, l):
-                    return "metal_plane_atoms_same_side"
-        if 0 not in [i, j, k, l]:
-            f = self.check_if_atoms_on_same_side
-            if all([not f([0, o_i], i, j, k) for o_i in other_i]):
-                if all([not f([0, o_i], j, k, l) for o_i in other_i]):
-                    return "metal_over_plane"
-        return False
-
-    def _check_if_plane_on_metal(self, m_i, plane):
-        """Check if the metal atom falls on a plane formed by 4 atoms in the
-        coordination sphere.
-        :param m_i: index of metal atom.
-        :param plane: indices for 4 atoms of the coordination sphere that fall
-        on a plane.
-        :return: Whether the metal falls on plane or not (True or False).
-        """
-        crit = 180.0
-        # tol = self.tolerance['plane_on_metal']
-        tol = self.tolerance['plane']
-        if m_i in plane:
-            return True
-
-        angles = []
-        metal_planes = [plane[0:3], plane[1:4]]
-        for mp in metal_planes:
-            i, j, k, l = tuple(mp+[m_i])
-            d = abs(self.get_dihedral(i, j, k, l))
-            abs_d = abs(d - 180 * int(d / 91.0))
-            angles.append(abs_d)
-        avg_d = sum(angles)/2
-        return abs(avg_d - crit) < tol or abs(avg_d - crit + 180) < tol
-
-    def _find_other_indeces(self, indices):
-        """Find atoms not the given set."""
-        return [i for i in range(self.num_sites) if i not in indices]
-
-    def check_if_atoms_on_same_side(self, other_indices, i, j, k):
-        """Check whether a given set of atoms are all on the same side of a
-        given plane formed by i,j,k.
-        """
-        # keys = [(i, j, k, o_i) for o_i in other_indices]
-        # dihedrals_other = [self.get_dihedral(key) for key in keys]
-
-        d_other = [self.get_dihedral(i, j, k, o_i) for o_i in other_indices]
-
-        dihedrals_p = [d >= 0.0 for d in d_other]
-        dihedrals_n = [d < 0.0 for d in d_other]
-
-        return all(dihedrals_p) or all(dihedrals_n)
-
-    def _assign_equivalent_dihedrals(self, i, j, k, l, d):
-        keys = ((i, j, k, l), (i, k, j, l),
-                (l, j, k, i), (l, k, j, i))
-        v_s = (d, -d, -d, d)
-        for key, v in zip(keys, v_s):
-            self._all_dihedrals[key] = v
-
-    def get_dihedral(self, i, j, k, l):
-        """
-        Returns dihedral angle specified by four sites.
-
-        Args:
-            i (int): Index of first site
-            j (int): Index of second site
-            k (int): Index of third site
-            l (int): Index of fourth site
-
-        Returns:
-            (float) Dihedral angle in degrees.
-        """
-        key = (i, j, k, l)
-        if key in self._all_dihedrals:
-            return self._all_dihedrals[key]
-        dihedral = self.get_dihedral_from_coords(self[i].coords, self[j].coords,
-                                                 self[k].coords, self[l].coords)
-        self._assign_equivalent_dihedrals(i, j, k, l, dihedral)
-        return dihedral
-
-    @staticmethod
-    def get_dihedral_from_coords(c1, c2, c3, c4):
-        v1 = c3 - c4
-        v2 = c2 - c3
-        v3 = c1 - c2
-        v23 = np.cross(v2, v3)
-        v12 = np.cross(v1, v2)
-        nom = np.linalg.norm(v2) * np.dot(v1, v23)
-        denom = np.dot(v12, v23)
-        if abs(nom) < 1e-10 and abs(denom) < 1e-10:
-            dihedral = 0.0
-        else:
-            dihedral = math.degrees(math.atan2(nom, denom))
-        return dihedral
-
     def write_cif_file(self, output_folder, index):
         """Write MofSite to specified output_folder as a CIF file and use index
         to name it.
@@ -702,6 +560,154 @@ class MetalSite(MofStructure):
         carbon_atoms = s_one == s_two == 'C'
 
         return (not bond) or two_same_metals or carbon_atoms
+
+    def _check_planes(self, site):
+        """Determine whether a site is open using the dihedral angles
+        between the atoms in the coordination sphere.
+        :param site: Index of site to be checked.
+        """
+
+        for i, j, k in itertools.combinations(range(self.num_sites), 3):
+            plane = self._compute_plane(i, j, k)
+            if all([p == 0.0 for p in plane]):
+                continue
+            sides = self._sides([i, j, k], plane)
+            # Side of the site in question.
+            s_site = sides[site]
+            # All sites that are not on the plane and are not the site in
+            # question.
+            s_o = [s for i, s in enumerate(sides) if i != site and s != 0]
+            # Keep only the unique sides
+            s_o_unique = list(set(s_o))
+            # Number of unique sides for other sites (sites not on plane and
+            # not the site in question)
+            ls = len(s_o_unique)
+            # ls = 0 : all other sites are on the plane
+            # ls = 1 : all other sites on one side of plane
+            # ls = 2 : other sites are on both sides of plane
+            if ls == 0 or (ls == 1 and s_site != s_o_unique[0]):
+                # Site is open if:
+                # a) If all other sites fall on the plane. (ls == 0)
+                # b) The metal site falls on the plane and all other sites
+                # fall on one side of the plane. (ls == 1, s_site == 0 and
+                # s_site != s_o_unique[0])
+                # c) The metal site falls on one side of the plane and all
+                # other sites fall on the oposite side of the plane.  (ls == 1,
+                # s_site == 1,-1 and s_site != s_o_unique[0])
+                place = {0: "over", 1: "on"}[abs(s_site)]
+                msg = "{}_{}L_{}_open_plane".format(self[site].specie,
+                                                    self.num_linkers, place)
+                self._mark_oms(msg)
+                break
+            assert self.is_open is False
+
+    def _sides(self, p_i, plane):
+        """Given a plane p defined by 3 of the atoms in the MetalSite determine
+        on which side of the plane all the atoms in the MetalSite fall (-1 or 1)
+        or if it falls on the plane (0).
+
+        :param p_i: Indices of the 3 atoms that define the plane
+        :param plane: Plane constants
+        :return: List of side value for all atoms in the MetalSite, possible
+        values can -1, 0, and 1.
+        """
+        atoms_on_plane = [True if i in p_i
+                          else self._is_point_on_plane(self[i].coords, p_i,
+                                                       plane)
+                          for i in range(len(self))]
+
+        dists = [self._get_distance_from_plane(s.coords, plane) for s in self]
+        sides = [0 if a or d == 0.0
+                 else int(d/abs(d))
+                 for d, a in zip(dists, atoms_on_plane)]
+        return sides
+
+    def _is_point_on_plane(self, point, p_i, p):
+        """Given a point and plane determine if the point falls on the plane,
+        using the angle between the projection of the point, each atom on the
+        plane and the actual position of the point with a specified tolerance
+        value.
+        :param point: Cartesian coordinates of point to check.
+        :param p: plane in the form of a list with the 4 constants defining
+        a plane.
+        :return: True if the point falls on plane and False otherwise.
+
+        """
+        tol = self.tolerance['on_plane']
+        point_on_plane = self._project_point_onto_plane(point, p)
+        angles = [self._get_angle_c(point_on_plane, self[ii].coords, point)
+                  for ii in p_i]
+        return all([a < tol for a in angles])
+
+    def _get_angle_c(self, c1, c2, c3):
+        """
+        Calculates the angle between three points in degrees.
+
+        :param c1: Coordinates of first point.
+        :param c2: Coordinates of second point.
+        :param c3: Coordinates of third point.
+        :return: Angle between them in degrees.
+        """
+        v1 = c1 - c2
+        v2 = c3 - c2
+        return self._get_angle_v(v1, v2)
+
+    @staticmethod
+    def _get_angle_v(v1, v2):
+        """
+        Calculates the angle between two vectors in degrees.
+
+        :param v1: First vector.
+        :param v2: Second vector.
+        :return: Angle between them in degrees.
+        """
+        if np.dot(v1, v2) == 0.0:
+            return 0.0
+        d = np.dot(v1, v2) / np.linalg.norm(v1) / np.linalg.norm(v2)
+        d = min(d, 1.0)
+        d = max(d, -1.0)
+        angle = math.acos(d)
+        return math.degrees(angle)
+
+    @staticmethod
+    def _get_distance_from_plane(point, plane):
+        """Given a point and a plane compute the distance between the point and
+        the projection of the point on the plane."""
+        plane_xyz = plane[0:3]
+        distance = np.inner(plane_xyz, point) - plane[3]
+        return distance / np.linalg.norm(plane_xyz)
+
+    def _compute_plane(self, i, j, k):
+        """Given three atom indices, compute the plane that passes through them.
+        """
+        c1 = self[i].coords
+        c2 = self[j].coords
+        c3 = self[k].coords
+        return self._compute_plane_c(c1, c2, c3)
+
+    @staticmethod
+    def _compute_plane_c(c1, c2, c3):
+        """Given three atom coordinates, compute the plane that passes
+        through them.
+        """
+        ij = c1 - c2
+        kj = c3 - c2
+        p_vector = np.cross(ij, kj)
+        c = np.dot(c1, p_vector)
+        plane = list(p_vector) + [c]
+        return plane
+
+    @staticmethod
+    def _project_point_onto_plane(point, plane):
+        """Given a point and plane compute the projection of the point onto the
+        plane.
+        """
+        vector = plane[0:3]
+        constant = plane[3]
+        nom = np.inner(vector, point) - constant
+        denom = np.inner(vector, vector)
+        const = nom / denom
+        return np.array([po - v * const for po, v in zip(point, vector)])
 
 
 class Helper:
