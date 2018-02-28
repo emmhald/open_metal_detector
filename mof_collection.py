@@ -112,7 +112,7 @@ class MofCollection:
 
     @property
     def metal_site_df(self):
-        """Get a pandas DataDrame that lists the OMS results for each metal
+        """Get a pandas DataFrame that lists the OMS results for each metal
         type.
         """
         if self._metal_site_df is not None:
@@ -149,7 +149,7 @@ class MofCollection:
         :param analysis_folder: Path to the folder where the results will
         be stored. (default: 'analysis_folder')
         :param name_list: List of MOF names to include in the collection. If
-        set all the other CIF files in the folder will be scluded.
+        set, all the other CIF files in the folder will be excluded.
         (default: None)
         :return: A MofCollection object holding the specified MOF structures.
         """
@@ -191,6 +191,9 @@ class MofCollection:
             p.join()
 
         print()
+        if overwrite:
+            for mi in self.mof_coll:
+                self._update_property_from_oms_result(mi)
         self._validate_properties(['has_oms'])
 
         t1 = time.time()
@@ -220,14 +223,12 @@ class MofCollection:
         for i, mi in enumerate(not_read):
             print("{}".format(mi['mof_name']))
 
-        mofs_no_metal = [mi for mi in self.mof_coll
-                         if len(self.properties[mi['checksum']]['metal_sites'])
-                         == 0]
-        msg = {0: "\r", 1: "\nThe following structures contain no metal:"}
+        mofs_no_metal = [mi for mi in self.mof_coll if not
+                         self.properties[mi['checksum']]['metal_species']]
+        msg = {0: "\r", 1: "The following structures contain no metal:"}
         print(msg[min(1, len(mofs_no_metal))])
         for mi in mofs_no_metal:
             p = self.properties[mi['checksum']]
-            assert len(p['metal_species']) == 0
             print("{}.cif {}".format(p['name'],
                                      p['metal_species']+p['non_metal_species']))
 
@@ -326,13 +327,13 @@ class MofCollection:
 
         return sub_collection
 
-    def read_ciffiles(self):
+    def read_cif_files(self):
         """Iterate over all MOF files in the collection, load each CIF and
         store MOF properties such as density, unit cell volume etc.
         """
         print(self.separator)
         print('Reading CIF files and updating properties...')
-        self._loop_over_collection(self._update_property_from_ciffile)
+        self._loop_over_collection(self._update_property_from_cif_file)
         self._store_properties()
         print('Done')
         print(self.separator)
@@ -363,8 +364,7 @@ class MofCollection:
               ' the specified folder:\n\"{}\"'.format(tf_abspath))
         print('The cif paths will be updated.')
 
-        mofl_col_tmp = list(self.mof_coll)
-        for i, mi in enumerate(mofl_col_tmp):
+        for i, mi in enumerate(list(self.mof_coll)):
             destination_path = "{}/{}.cif".format(tf_abspath, mi['mof_name'])
             self.mof_coll[i] = {"mof_name": mi['mof_name'],
                                 "mof_file": destination_path,
@@ -479,7 +479,10 @@ class MofCollection:
 
     def _load_mofs(self):
         """Add MOfs to collection, use CIF file checksum as an identifier."""
-        for mof_file in self.path_list:
+        print('Loading CIF files...')
+        lm = len(self.path_list) / 100.0
+        for i, mof_file in enumerate(self.path_list):
+            print("{:5.2f}%".format((i+1) / lm), end="\r")
             checksum = Helper.get_checksum(mof_file)
             mof_name = os.path.splitext(os.path.basename(mof_file))[0]
             mof_info = {"mof_name": mof_name,
@@ -490,7 +493,7 @@ class MofCollection:
                 self.properties[checksum] = {"mof_name": mof_name}
             else:
                 if self.properties[checksum]["mof_name"] != mof_name:
-                    exit("MOF name and CIF checksum missmatch for {}.cif "
+                    exit("MOF name and CIF checksum mismatch for {}.cif "
                          "{}.cif. Either the CIF files has already been "
                          "processed with a different name, or the CIF file "
                          "has changed since it was processed."
@@ -498,7 +501,7 @@ class MofCollection:
                                    self.properties[checksum]['mof_name']))
             if self._check_if_results_exist(mof_name):
                 self._compare_checksums(mof_file, mof_name, checksum)
-
+        print()
         self._store_properties()
 
     def _compare_checksums(self, mof_file, mof_name, checksum):
@@ -541,7 +544,7 @@ class MofCollection:
             print("Skipping {}. Results already exist and overwrite is set "
                   "to False.".format(mi['mof_name']))
             return
-        mof = self._create_mof_from_cifile(mi['mof_file'])
+        mof = self._create_mof_from_cif_file(mi['mof_file'])
         if mof.summary['cif_okay']:
             mof.analyze_metals(output_folder=mof_folder)
 
@@ -549,7 +552,7 @@ class MofCollection:
         """Split collection into number of batches
 
         :param num_batches: Number of batches (default: 1)
-        :param overwrite: Controls if the results willbe overwritten or not
+        :param overwrite: Controls if the results will be overwritten or not
         (default: False)
         """
         print(self.separator)
@@ -674,7 +677,7 @@ class MofCollection:
                   end="\r")
             mp = self.properties[mi['checksum']]
             if not self._validate_property(mp, keys):
-                self._update_property_from_ciffile(mi)
+                self._update_property_from_cif_file(mi)
                 validation_level = 1
             if not self._validate_property(mp, keys):
                 self._update_property_from_oms_result(mi)
@@ -698,10 +701,10 @@ class MofCollection:
             return True
         return False
 
-    def _update_property_from_ciffile(self, mi):
+    def _update_property_from_cif_file(self, mi):
         """Update properties dictionary from a CIF file."""
         mp = self.properties[mi['checksum']]
-        mof = self._create_mof_from_cifile(mi['mof_file'])
+        mof = self._create_mof_from_cif_file(mi['mof_file'])
         if mof:
             mp.update(mof.summary)
             self.load_balance_index[mi['mof_name']] = len(mof) * len(mof)
@@ -726,13 +729,13 @@ class MofCollection:
             pickle.dump(self._properties, properties_file)
 
     @staticmethod
-    def _create_mof_from_cifile(path_to_mof):
+    def _create_mof_from_cif_file(path_to_mof):
         """Create and return a MofStructure object from a path to a CIF file."""
         mof = MofStructure.from_file(path_to_mof, primitive=False)
         return mof
 
     def _write_t_factors(self, sites, n, target):
-        """Summarize the findings in table form and histogams for a give
+        """Summarize the findings in table form and histograms for a give
         t-factor.
         """
         s_n = sites.loc[sites['number_of_linkers'] == n].copy()
