@@ -125,6 +125,7 @@ class MofStructure(Structure):
                 self.summary['problematic'] = omc.is_problematic
 
             cs = self._find_coordination_sequence(m_index)
+            cs = [self.species_str[m_index]] + cs
             omc.is_unique = self._check_if_new_site(ms_cs_list[omc.is_open], cs)
             if omc.is_unique:
                 ms_cs_list[omc.is_open].append(cs)
@@ -569,7 +570,7 @@ class MetalSite(MofStructure):
 
         for i, j, k in itertools.combinations(range(self.num_sites), 3):
             plane = self._compute_plane(i, j, k)
-            if all([p == 0.0 for p in plane]):
+            if all([abs(p-0.0) < 1e-5 for p in plane]):
                 continue
             sides = self._sides([i, j, k], plane)
             # Side of the site in question.
