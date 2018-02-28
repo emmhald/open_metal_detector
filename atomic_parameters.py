@@ -122,7 +122,7 @@ class Atom:
                     'Tl', 'Pb', 'Bi', 'Po', 'At', 'Rn', 'Fr', 'Ra', 'Ac', 'Th',
                     'Pa', 'U', 'Np', 'Pu', 'Am', 'Cm']
 
-        self._list_of_non_metals = ['H', 'D', 'B', 'C', 'N', 'O', 'F', 'Si',
+        self._list_of_non_metals = ['H', 'D', 'B', 'C', 'N', 'O', 'F',
                                     'P', 'S', 'Cl', 'Se', 'Br', 'I']
 
         self.element = element
