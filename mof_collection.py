@@ -35,6 +35,7 @@ class MofCollection:
         self.mof_coll = []
         self.batches = []
         self._metal_site_df = None
+        self._mof_oms_df = None
         self._properties = {}
         self.load_balance_index = {}
         self.analysis_limit = None
@@ -109,6 +110,43 @@ class MofCollection:
             with open(self._properties_filename, 'rb') as properties_file:
                 self._properties = pickle.load(properties_file)
         return self._properties
+
+    @property
+    def mof_oms_df(self):
+        """Get a pandas DataFrame that lists for each MOF whether it has an OMS
+        or not and if it has an OMS what metal types it is.
+        """
+        if self._mof_oms_df is not None:
+            return self._mof_oms_df
+        if not self._validate_properties(['has_oms']):
+            print('OMS analysis not finished for all MOFs in collection.')
+            return False
+        mof_info = {}
+        for mi in self.mof_coll:
+            mp = self.properties[mi['checksum']]
+            if 'metal_sites' not in mp:
+                continue
+            metal_sites = mp['metal_sites']
+            if len(metal_sites) == 0:
+                print('No Metal Found in {}'.format(mp['name']))
+            oms_types = [ms["metal"] for ms in metal_sites
+                         if ms["is_open"] and ms["unique"]]
+            oms_types = list(set(oms_types))
+            if oms_types:
+                oms_types = ",".join(oms_types)
+            else:
+                oms_types = "N/A"
+            if mp['has_oms']:
+                has_oms = 'Yes'
+            else:
+                has_oms = 'No'
+            all_metal_species = ",".join(set(mp['metal_species']))
+            mof_info[mp['name']] = {'Metal Types': all_metal_species,
+                                    'Has OMS': has_oms,
+                                    'OMS Types': oms_types}
+        self._metal_site_df = pd.DataFrame.from_dict(mof_info,
+                                                     orient='index')
+        return self._metal_site_df
 
     @property
     def metal_site_df(self):
