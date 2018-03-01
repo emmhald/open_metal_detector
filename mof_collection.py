@@ -9,7 +9,7 @@ import warnings
 import pandas as pd
 import numpy as np
 import matplotlib.pylab as plt
-from multiprocessing import Process, cpu_count
+from multiprocessing import Process, cpu_count, Array
 from mof import Helper
 from mof import MofStructure
 from atomic_parameters import Atom
@@ -181,16 +181,35 @@ class MofCollection:
         t0 = time.time()
 
         self._make_batches(num_batches, overwrite)
-        processes = []
+
+        status = Array('i', [0 for i in range(num_batches)])
         for i, batch in enumerate(self.batches):
-            p = Process(target=self._run_batch, args=(i, batch, overwrite,))
+            p = Process(target=self._run_batch,
+                        args=(i, batch, overwrite,status))
             p.start()
-            processes.append(p)
 
-        for p in processes:
-            p.join()
+        lbs = [len(batch)/100.0 for batch in self.batches]
+        wait_time = 0.0
+        status_prev = [0 for i in range(num_batches)]
+        while True:
+            # Create a list from the shared array to make sure it doesnt change
+            # during the iteration
+            status_ = list(status)
+            if all([sp == s for sp, s in zip(status_prev, status_)]):
+                wait_time = min(25, 0.1+wait_time)
+                time.sleep(wait_time)
+            status_prev = status_
 
-        print()
+            sout = ["Batch {} Finished.".format(b + 1)
+                    if len(self.batches[b]) == 0 or s < 0 else
+                    "Batch {} {:.2f}% : Analysing {:}"
+                    "".format(b+1, (s+1)/lbs[b], self.batches[b][s]['mof_name'])
+                    for b, s in enumerate(status_)]
+            print("|**| ".join(sout) + 100 * " ", end='\r', flush=True)
+
+            if all([s < 0 for s in status_]):
+                break
+
         if overwrite:
             for mi in self.mof_coll:
                 self._update_property_from_oms_result(mi)
@@ -223,7 +242,9 @@ class MofCollection:
         for i, mi in enumerate(not_read):
             print("{}".format(mi['mof_name']))
 
-        mofs_no_metal = [mi for mi in self.mof_coll if not
+        mofs_no_metal = [mi for mi in self.mof_coll
+                         if self.properties[mi['checksum']]['cif_okay']
+                         and not
                          self.properties[mi['checksum']]['metal_species']]
         msg = {0: "\r", 1: "The following structures contain no metal:"}
         print(msg[min(1, len(mofs_no_metal))])
@@ -524,15 +545,12 @@ class MofCollection:
                                                           mof_file))
             exit(1)
 
-    def _run_batch(self, b, batch, overwrite):
+    def _run_batch(self, b, batch, overwrite, status):
         """Run OMS analysis for each of the batches."""
-        lb = len(batch)/100.0
         for i, mi in enumerate(batch):
-            print("Batch {} {:.2f}% : Analysing {:100} "
-                  "".format(b+1, (i+1)/lb, mi['mof_name']), end='\r',
-                  flush=True)
+            status[b] = i
             self._analyse(mi, overwrite)
-        print('\nFINISHED Batch {}.'.format(b + 1))
+        status[b] = -1
 
     def _analyse(self, mi, overwrite):
         """For a given CIF file, create MofStructure object and run OMS
