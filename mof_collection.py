@@ -240,7 +240,7 @@ class MofCollection:
 
             sout = ["Batch {} Finished.".format(b + 1)
                     if len(self.batches[b]) == 0 or s < 0 else
-                    "Batch {} {:.2f}% : Analysing {:}"
+                    "Batch {} {:.2f} % : Analysing {:}"
                     "".format(b+1, (s+1)/lbs[b], self.batches[b][s]['mof_name'])
                     for b, s in enumerate(status_)]
             print("|**| ".join(sout) + 100 * " ", end='\r', flush=True)
@@ -539,9 +539,11 @@ class MofCollection:
     def _load_mofs(self):
         """Add MOfs to collection, use CIF file checksum as an identifier."""
         print('Loading CIF files...')
+        li = max(int(len(self.path_list) / 1000), 1)
         lm = len(self.path_list) / 100.0
         for i, mof_file in enumerate(self.path_list):
-            print("{:5.2f}%".format((i+1) / lm), end="\r")
+            if i % li == 0:
+                print("{:4.1f} %".format((i+1) / lm), end="\r", flush=True)
             checksum = Helper.get_checksum(mof_file)
             mof_name = os.path.splitext(os.path.basename(mof_file))[0]
             mof_info = {"mof_name": mof_name,
@@ -560,7 +562,7 @@ class MofCollection:
                                    self.properties[checksum]['mof_name']))
             if self._check_if_results_exist(mof_name):
                 self._compare_checksums(mof_file, mof_name, checksum)
-        print()
+        print("\nAll Done.")
         self._store_properties()
 
     def _compare_checksums(self, mof_file, mof_name, checksum):
@@ -679,10 +681,13 @@ class MofCollection:
         function.
         :param func: Function to use.
         """
+        li = max(int(len(self.mof_coll) / 1000), 1)
         lm = len(self.mof_coll) / 100
         for i, mi in enumerate(self.mof_coll):
-            print("{:5.2f}% {:100}".format((i+1) / lm, mi['mof_name']),
-                  end="\r")
+            if i % li == 0:
+                print("{} {:4.1f} % {:100}".format(mi['mof_name'],
+                                                   (i+1)/lm, " "),
+                      end="\r", flush=True)
             func(mi)
         print()
 
@@ -727,10 +732,13 @@ class MofCollection:
         print('\n{} : '.format(msg[min(2, len(keys))]), end='')
         print("\"{}\"".format(", ".join([k for k in keys])))
         validation_level = 0
+        li = max(int(len(self.mof_coll)/1000), 1)
         lm = len(self.mof_coll) / 100
         for i, mi in enumerate(self.mof_coll):
-            print("{:5.2f}% {:100}".format((i+1) / lm, mi['mof_name']),
-                  end="\r")
+            if i % li == 0:
+                print("{} {:4.1f} % {:100}".format(mi['mof_name'], (i+1) / lm,
+                                                   " "),
+                      end="\r", flush=True)
             mp = self.properties[mi['checksum']]
             if not self._validate_property(mp, keys):
                 self._update_property_from_cif_file(mi)
@@ -739,11 +747,11 @@ class MofCollection:
                 self._update_property_from_oms_result(mi)
                 validation_level = 2
             if not self._validate_property(mp, keys):
-                # count_ok += 1
                 self._store_properties()
                 print('\nProperty Missing\n{}'.format(self.separator))
                 return validation_level, False
         self._store_properties()
+        print("Validated 100 % "+100*" ", end="\r")
         print()
         return validation_level, True
 
