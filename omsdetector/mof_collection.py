@@ -10,9 +10,9 @@ import pandas as pd
 import numpy as np
 import matplotlib.pylab as plt
 from multiprocessing import Process, cpu_count, Array
-from mof import Helper
-from mof import MofStructure
-from atomic_parameters import Atom
+from omsdetector.mof import Helper
+from omsdetector.mof import MofStructure
+from omsdetector.atomic_parameters import Atom
 from sys import exit
 pd.options.display.max_rows = 1000
 

@@ -2,7 +2,7 @@
 import json
 import copy
 from pymatgen import Structure
-from atomic_parameters import Atom
+from omsdetector.atomic_parameters import Atom
 import numpy as np
 import sys
 import itertools
