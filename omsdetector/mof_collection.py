@@ -5,6 +5,7 @@ import json
 import time
 import pickle
 import shutil
+import random
 import warnings
 import pandas as pd
 import numpy as np
@@ -118,7 +119,7 @@ class MofCollection:
         """
         if self._mof_oms_df is not None:
             return self._mof_oms_df
-        if not self._validate_properties(['has_oms']):
+        if not self._validate_properties(['has_oms'])[1]:
             print('OMS analysis not finished for all MOFs in collection.')
             return False
         mof_info = {}
@@ -155,7 +156,7 @@ class MofCollection:
         """
         if self._metal_site_df is not None:
             return self._metal_site_df
-        if not self._validate_properties(['has_oms']):
+        if not self._validate_properties(['has_oms'])[1]:
             print('OMS analysis not finished for all MOFs in collection.')
             return False
         site_info = {}
@@ -311,6 +312,22 @@ class MofCollection:
         for nd in not_done:
             print(nd)
         print(self.separator)
+
+    def sample_collection(self, sample_size=50):
+        """Randomly select a sample of MOFs in the collection and
+        return a new collection with the MOFs in the sample.
+
+        :param sample_size: Number of MOFs to be selected. Default value is 50.
+
+        """
+        ll = len(self.mof_coll)
+        if sample_size > ll:
+            sample_size = ll
+            print(f"Can only sample up to the number of MOFs "
+                  f"in the collection ({ll}).")
+        mof_list = [mi['mof_file'] for mi in self.mof_coll]
+        sampled_list = random.sample(mof_list, sample_size)
+        return MofCollection(sampled_list, analysis_folder=self.analysis_folder)
 
     def filter_collection(self, using_filter=None,
                           new_collection_folder=None,
@@ -685,9 +702,8 @@ class MofCollection:
         lm = len(self.mof_coll) / 100
         for i, mi in enumerate(self.mof_coll):
             if i % li == 0:
-                print("{} {:4.1f} % {:100}".format(mi['mof_name'],
-                                                   (i+1)/lm, " "),
-                      end="\r", flush=True)
+                print("{:4.1f} % {} {:100}".format((i+1)/lm, mi['mof_name'],
+                                                   " "), end="\r", flush=True)
             func(mi)
         print()
 
@@ -736,9 +752,8 @@ class MofCollection:
         lm = len(self.mof_coll) / 100
         for i, mi in enumerate(self.mof_coll):
             if i % li == 0:
-                print("{} {:4.1f} % {:100}".format(mi['mof_name'], (i+1) / lm,
-                                                   " "),
-                      end="\r", flush=True)
+                print("{:4.1f} % {} {:100}".format((i+1) / lm, mi['mof_name'],
+                                                   " "), end="\r", flush=True)
             mp = self.properties[mi['checksum']]
             if not self._validate_property(mp, keys):
                 self._update_property_from_cif_file(mi)
