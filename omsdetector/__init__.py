@@ -1,0 +1,1 @@
+from omsdetector.mof_collection import MofCollection
