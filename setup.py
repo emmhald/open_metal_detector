@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='open_metal_detector',
-    version='2018.5.3',
+    version='2018.12.3',
     packages=['omsdetector'],
     install_requires=["pandas>=0.22.0",
                       "matplotlib>=2.1.2",
