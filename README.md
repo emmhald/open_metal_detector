@@ -1,18 +1,18 @@
-# Python program to analyze collections of MOF structures for open metal sites.
+# A Python program to analyze collections of Metal Organic Frameworks (MOFs) for open metal sites.
 Author: Emmanuel Haldoupis <emmhald@gmail.com>
 
-Jan. 2nd 2018
+March 12th 2018
 
 ## Description
 
-Given a set of cif files this program can read the files and analyze the structures and
+Given a set of CIF files this program can read the files, analyze the structures and
 detect all the unique open metal sites present in each structure.
 
 The first step is to create a collection containing all the desired CIF files. We can do
 this but pointing to a folder containing the CIF files.
 
 ```
-from mof_collection import MofCollection 
+from omsdetector import MofCollection 
 mof_coll = MofCollection.from_folder(collection_folder="path to cif folder", 
                                      analysis_folder="path to analysis folder")
 ```
@@ -20,7 +20,7 @@ mof_coll = MofCollection.from_folder(collection_folder="path to cif folder",
 Where **collection_folder** is the folder where the CIF files are located and **analysis_folder** is the folder where the results will be saved.
 
 
-The analysis is run using the following command on the mof_coll object
+The analysis is run using the following command on the mof_coll object:
 
 ```
 mof_coll.analyse_mofs()
@@ -36,11 +36,12 @@ mof_coll.summarize_results()
 mof_coll.summarize_tfactors()
 ```
 
-The summarize_results method generates a table that summarizes the number of open metal sites found for each metal atom.
-The summarize_tfactors method, generates histograms (and stores them) for the distribution of the t-factors, which indicate
+The summarize_results() method generates a table that summarizes the number of open metal sites found for each metal type.
+The summarize_tfactors() method, generates histograms (and stores them) for the distribution of the t-factors, which indicate
 the degree of deviation from a closed coordination sphere for tetra, penta and hexa-coordinated coordination spheres. 
 
-Finaly a collection can be filtered to create a sub-collection using the following filters:
+Finaly, a collection can be filtered to create a sub-collection using the following filters:
+
 * "density": [min, max] (range of values)
 * "oms_density": [min, max] (range of values)
 * "uc_volume":  [min, max] (range of values)
@@ -59,7 +60,13 @@ See the example jupyter notebook for more details.
 
 ## Requirments
 * python 3.6.3
-* pymatgen  2017.12.16
-* pandas 0.21.1
-* numpy 1.13.3
+* pymatgen  2018.2.13
+* pandas 0.22.0
+* numpy 1.14.1
 * matplotlib 2.1.1
+
+## Reference
+
+Y.G. Chung, E. Haldoupis, B.J. Bucior, M. Haranczyk, H. Zhang, K. D. Vogiatzis, M. Millisavlievic, S. Liang, J.S. Camp, J. Chen, B. Slater, L. Gagliardi, J.I. Siepmann, D.S. Sholl, R.Q. Snurr (in preparation)
+
+
