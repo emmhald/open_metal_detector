@@ -9,7 +9,7 @@ Given a set of CIF files this program can read the files, analyze the structures
 detect all the unique open metal sites present in each structure.
 
 The first step is to create a collection containing all the desired CIF files. We can do
-this but pointing to a folder containing the CIF files.
+this by pointing to a folder containing the CIF files.
 
 ```
 from omsdetector import MofCollection 
@@ -37,8 +37,8 @@ mof_coll.summarize_tfactors()
 ```
 
 The summarize_results() method generates a table that summarizes the number of open metal sites found for each metal type.
-The summarize_tfactors() method, generates histograms (and stores them) for the distribution of the t-factors, which indicate
-the degree of deviation from a closed coordination sphere for tetra, penta and hexa-coordinated coordination spheres. 
+The summarize_tfactors() method generates histograms (and stores them) for the distribution of the t-factors, which indicate
+the degree of deviation from a closed coordination sphere for tetra, penta, and hexa-coordinated coordination spheres. 
 
 Finaly, a collection can be filtered to create a sub-collection using the following filters:
 
@@ -67,6 +67,5 @@ See the example jupyter notebook for more details.
 
 ## Reference
 
-Y.G. Chung, E. Haldoupis, B.J. Bucior, M. Haranczyk, H. Zhang, K. D. Vogiatzis, M. Millisavlievic, S. Liang, J.S. Camp, J. Chen, B. Slater, L. Gagliardi, J.I. Siepmann, D.S. Sholl, R.Q. Snurr (in preparation)
-
+Chung, Yongchul; Haldoupis, Emmanuel; Bucior, Benjamin; Haranczyk, Maciej ; Zhang, Hongda; Vogiatzis, Konstantinos; Milisavljevic, Marija; Ling, Sanliang; Camp, Jeffrey; Slater, Ben; Siepmann, J.; Sholl, David; Snurr, Randall *Computation-Ready, Experimental Metal-Organic Framework Database 2018: Additional Structures, Open Metal Sites, and Crystal Reconstruction* (submited to Chemistry of Materials)
 
