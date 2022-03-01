@@ -1,0 +1,59 @@
+{
+   "cif_okay": true,
+   "problematic": false,
+   "has_oms": true,
+   "metal_sites": [
+      {
+         "metal": "Ni",
+         "type": "Ni_5L_over_open_plane",
+         "is_open": true,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 5,
+         "t_factor": 0.011728946681465876
+      },
+      {
+         "metal": "Ni",
+         "type": "Ni_5L_over_open_plane",
+         "is_open": true,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 5,
+         "t_factor": 0.011728946681468243
+      },
+      {
+         "metal": "Ni",
+         "type": "Ni_5L_over_open_plane",
+         "is_open": true,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 5,
+         "t_factor": 0.011728946681466823
+      },
+      {
+         "metal": "Ni",
+         "type": "Ni_5L_over_open_plane",
+         "is_open": true,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 5,
+         "t_factor": 0.011728946681466823
+      }
+   ],
+   "oms_density": 0.0012606450933737032,
+   "checksum": "eed0db86098103abe4dc155e080f1af1efb3477f8477a022b13fe77e4055856b",
+   "metal_species": [
+      "Ni"
+   ],
+   "non_metal_species": [
+      "O",
+      "H",
+      "S",
+      "N",
+      "C"
+   ],
+   "name": "BAXLOD_clean",
+   "uc_volume": 793.2446691430241,
+   "density": 1.9581693921721723,
+   "date_created": "2022-03-01T12:38:24.398089"
+}

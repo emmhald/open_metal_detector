@@ -69,12 +69,22 @@ See the example jupyter notebook for more details.
 
 Chung, Yongchul; Haldoupis, Emmanuel; Bucior, Benjamin; Haranczyk, Maciej ; Zhang, Hongda; Vogiatzis, Konstantinos; Milisavljevic, Marija; Ling, Sanliang; Camp, Jeffrey; Slater, Ben; Siepmann, J.; Sholl, David; Snurr, Randall *Computation-Ready, Experimental Metal-Organic Framework Database 2018: Additional Structures, Open Metal Sites, and Crystal Reconstruction* (submited to Chemistry of Materials)
 
+
+
 # March 1, 2022 Update
-Updated March 1, 2022
+
 Author: Grier M. Jones
 University of Tennessee,Knoxville
 
-Updated pymatgen dependencies
+
+Updated March 1, 2022
+Updates:
+- Updated pymatgen dependencies
+- Updated reference
+## Reference
+Chung, Y. G.; Haldoupis, E.; Bucior, B. J.; Haranczyk, M.; Lee, S.; Zhang, H.; Vogiatzis, K. D.; Milisavljevic, M.; Ling, S.; Camp, J. S.; et al. Advances, Updates, and Analytics for the Computation-Ready, Experimental Metal-Organic Framework Database: CoRE MOF 2019. J. Chem. Eng. Data 2019, 64 (12), 5985–5998.
+
+
 
 # Easy install for jupyter
 Create conda environment, link it to a jupyter kernel, and install required packages

@@ -1,0 +1,59 @@
+{
+   "cif_okay": true,
+   "problematic": false,
+   "has_oms": true,
+   "metal_sites": [
+      {
+         "metal": "Ni",
+         "type": "Ni_5L_over_open_plane",
+         "is_open": true,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 5,
+         "t_factor": 0.08233748239698571
+      },
+      {
+         "metal": "Ni",
+         "type": "Ni_5L_over_open_plane",
+         "is_open": true,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 5,
+         "t_factor": 0.08233748239698428
+      },
+      {
+         "metal": "Ni",
+         "type": "Ni_5L_over_open_plane",
+         "is_open": true,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 5,
+         "t_factor": 0.08233748239698713
+      },
+      {
+         "metal": "Ni",
+         "type": "Ni_5L_over_open_plane",
+         "is_open": true,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 5,
+         "t_factor": 0.08233748239698571
+      }
+   ],
+   "oms_density": 0.0010765424127184176,
+   "checksum": "43c7860f958fef5ad0104e2ceae7b4ab28c21f0a6cc313d20cd9a46e76c72742",
+   "metal_species": [
+      "Ni"
+   ],
+   "non_metal_species": [
+      "Cl",
+      "C",
+      "H",
+      "N",
+      "O"
+   ],
+   "name": "CEHWIX_clean",
+   "uc_volume": 928.8997703999999,
+   "density": 1.553359117199292,
+   "date_created": "2022-03-01T12:38:33.219962"
+}

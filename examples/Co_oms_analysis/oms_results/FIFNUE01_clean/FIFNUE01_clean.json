@@ -1,0 +1,40 @@
+{
+   "cif_okay": true,
+   "problematic": false,
+   "has_oms": true,
+   "metal_sites": [
+      {
+         "metal": "Co",
+         "type": "Co_4L_over_open_plane",
+         "is_open": true,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.024112596271521423
+      },
+      {
+         "metal": "Co",
+         "type": "Co_4L_over_open_plane",
+         "is_open": true,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.024112620654801045
+      }
+   ],
+   "oms_density": 0.0011772093854366275,
+   "checksum": "45d898809e7836f73d5ecc1cc2a17d2c75f4c4b9014e08aaedf328e6d2e0c308",
+   "metal_species": [
+      "Co"
+   ],
+   "non_metal_species": [
+      "C",
+      "N",
+      "O",
+      "H"
+   ],
+   "name": "FIFNUE01_clean",
+   "uc_volume": 849.4665540141779,
+   "density": 1.0170231873376305,
+   "date_created": "2022-03-01T12:38:31.424824"
+}

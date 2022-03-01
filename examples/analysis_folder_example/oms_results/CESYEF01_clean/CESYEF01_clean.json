@@ -1,0 +1,58 @@
+{
+   "cif_okay": true,
+   "problematic": false,
+   "has_oms": true,
+   "metal_sites": [
+      {
+         "metal": "Ag",
+         "type": "Ag_4L_over_open_plane",
+         "is_open": true,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.5033243748474564
+      },
+      {
+         "metal": "Ag",
+         "type": "Ag_4L_over_open_plane",
+         "is_open": true,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.5033243748474564
+      },
+      {
+         "metal": "Ag",
+         "type": "Ag_4L_over_open_plane",
+         "is_open": true,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.5033243748474567
+      },
+      {
+         "metal": "Ag",
+         "type": "Ag_4L_over_open_plane",
+         "is_open": true,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.5033243748474572
+      }
+   ],
+   "oms_density": 0.0014955897909426988,
+   "checksum": "7602b7570cd0ee0dada697e84c2f9aa03aa7e3c460c53911dac6621d084503ff",
+   "metal_species": [
+      "Ag"
+   ],
+   "non_metal_species": [
+      "C",
+      "N",
+      "O",
+      "H"
+   ],
+   "name": "CESYEF01_clean",
+   "uc_volume": 668.6325395212018,
+   "density": 2.2845050576579684,
+   "date_created": "2022-03-01T12:38:33.388057"
+}

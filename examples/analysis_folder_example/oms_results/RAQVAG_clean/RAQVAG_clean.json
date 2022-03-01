@@ -1,0 +1,92 @@
+{
+   "cif_okay": true,
+   "problematic": false,
+   "has_oms": true,
+   "metal_sites": [
+      {
+         "metal": "Fe",
+         "type": "Fe_4L_over_open_plane",
+         "is_open": true,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.8747275296058383
+      },
+      {
+         "metal": "Fe",
+         "type": "Fe_4L_over_open_plane",
+         "is_open": true,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.8747275296058383
+      },
+      {
+         "metal": "Fe",
+         "type": "Fe_4L_over_open_plane",
+         "is_open": true,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.8747275296058383
+      },
+      {
+         "metal": "Fe",
+         "type": "Fe_4L_over_open_plane",
+         "is_open": true,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.8747275296058383
+      },
+      {
+         "metal": "Fe",
+         "type": "Fe_4L_over_open_plane",
+         "is_open": true,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.8747275296058381
+      },
+      {
+         "metal": "Fe",
+         "type": "Fe_4L_over_open_plane",
+         "is_open": true,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.8747275296058383
+      },
+      {
+         "metal": "Fe",
+         "type": "Fe_4L_over_open_plane",
+         "is_open": true,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.8747275296058383
+      },
+      {
+         "metal": "Fe",
+         "type": "Fe_4L_over_open_plane",
+         "is_open": true,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.8747275296058383
+      }
+   ],
+   "oms_density": 0.001016890586555996,
+   "checksum": "bcce5ea9a3380495bedc215902c89138cf38c0c994d4fd1d3b054edcffce33e0",
+   "metal_species": [
+      "Fe"
+   ],
+   "non_metal_species": [
+      "O",
+      "P"
+   ],
+   "name": "RAQVAG_clean",
+   "uc_volume": 983.3899666500001,
+   "density": 2.6857247554364623,
+   "date_created": "2022-03-01T12:38:24.919829"
+}

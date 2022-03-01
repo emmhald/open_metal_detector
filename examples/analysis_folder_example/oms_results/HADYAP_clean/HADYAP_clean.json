@@ -1,0 +1,57 @@
+{
+   "cif_okay": true,
+   "problematic": true,
+   "has_oms": true,
+   "metal_sites": [
+      {
+         "metal": "U",
+         "type": "U_5L_over_open_plane",
+         "is_open": true,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 5,
+         "t_factor": 0.003655685434946084
+      },
+      {
+         "metal": "U",
+         "type": "U_5L_over_open_plane",
+         "is_open": true,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 5,
+         "t_factor": 0.0036556854349465576
+      },
+      {
+         "metal": "Co",
+         "type": "3_or_less",
+         "is_open": true,
+         "unique": true,
+         "problematic": true,
+         "number_of_linkers": 2,
+         "t_factor": -1
+      },
+      {
+         "metal": "Co",
+         "type": "3_or_less",
+         "is_open": true,
+         "unique": false,
+         "problematic": true,
+         "number_of_linkers": 2,
+         "t_factor": -1
+      }
+   ],
+   "oms_density": 0.0029525512294251597,
+   "checksum": "cb0287d1c4ac570fac942932f4fcd2dfabca12ca0eba953e7d69a1ff850d90d8",
+   "metal_species": [
+      "Co",
+      "U"
+   ],
+   "non_metal_species": [
+      "C",
+      "O"
+   ],
+   "name": "HADYAP_clean",
+   "uc_volume": 677.3802872810392,
+   "density": 2.3583680016931763,
+   "date_created": "2022-03-01T12:38:23.342605"
+}

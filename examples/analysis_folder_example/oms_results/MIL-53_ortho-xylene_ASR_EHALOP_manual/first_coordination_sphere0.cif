@@ -1,0 +1,33 @@
+# generated using pymatgen
+data_AlO6
+_symmetry_space_group_name_H-M   'P 1'
+_cell_length_a   15.94730000
+_cell_length_b   6.63100000
+_cell_length_c   13.92050000
+_cell_angle_alpha   90.00000000
+_cell_angle_beta   90.00000000
+_cell_angle_gamma   90.00000000
+_symmetry_Int_Tables_number   1
+_chemical_formula_structural   AlO6
+_chemical_formula_sum   'Al1 O6'
+_cell_volume   1472.04479777
+_cell_formula_units_Z   1
+loop_
+ _symmetry_equiv_pos_site_id
+ _symmetry_equiv_pos_as_xyz
+  1  'x, y, z'
+loop_
+ _atom_site_type_symbol
+ _atom_site_label
+ _atom_site_symmetry_multiplicity
+ _atom_site_fract_x
+ _atom_site_fract_y
+ _atom_site_fract_z
+ _atom_site_occupancy
+  Al  Al0  1  0.00127000  0.49458000  0.50093000  1
+  O  O1  1  0.08062000  0.57422000  0.58505000  1
+  O  O2  1  0.08166000  0.41647000  0.41779000  1
+  O  O3  1  -0.07983000  0.41743000  0.41820000  1
+  O  O4  1  -0.07946000  0.57338000  0.58370000  1
+  O  O5  1  0.00339000  0.74456000  0.44919000  1
+  O  O6  1  0.00294000  0.24460000  0.55192000  1

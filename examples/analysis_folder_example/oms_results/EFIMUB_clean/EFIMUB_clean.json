@@ -1,0 +1,92 @@
+{
+   "cif_okay": true,
+   "problematic": false,
+   "has_oms": false,
+   "metal_sites": [
+      {
+         "metal": "Be",
+         "type": "Closed",
+         "is_open": false,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9414389185773735
+      },
+      {
+         "metal": "Be",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9414389185773733
+      },
+      {
+         "metal": "Be",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9414389185773733
+      },
+      {
+         "metal": "Be",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9414389185773743
+      },
+      {
+         "metal": "Be",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9414389185773737
+      },
+      {
+         "metal": "Be",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.941438918577374
+      },
+      {
+         "metal": "Be",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.941438918577374
+      },
+      {
+         "metal": "Be",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9414389185773737
+      }
+   ],
+   "oms_density": 0.0011949127247567414,
+   "checksum": "ad52e052e4c97408fe582824df1540ffedc5f0b43bd850e6f1ca5d390deaa070",
+   "metal_species": [
+      "Be"
+   ],
+   "non_metal_species": [
+      "O",
+      "P"
+   ],
+   "name": "EFIMUB_clean",
+   "uc_volume": 836.881204193033,
+   "density": 1.650592568984906,
+   "date_created": "2022-03-01T12:38:29.509405"
+}

@@ -1,0 +1,40 @@
+{
+   "cif_okay": true,
+   "problematic": false,
+   "has_oms": true,
+   "metal_sites": [
+      {
+         "metal": "Ba",
+         "type": "Ba_6L_over_open_plane",
+         "is_open": true,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 6,
+         "t_factor": 0.3705731488896602
+      },
+      {
+         "metal": "Ba",
+         "type": "Ba_6L_over_open_plane",
+         "is_open": true,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 6,
+         "t_factor": 0.370573148890603
+      }
+   ],
+   "oms_density": 0.001443567891610894,
+   "checksum": "ff555ae8b24eff2319ab5d0d2d7ae23cfc7faeb8abbe0ac4951945d1fd1e8b2e",
+   "metal_species": [
+      "Ba"
+   ],
+   "non_metal_species": [
+      "C",
+      "N",
+      "O",
+      "H"
+   ],
+   "name": "OPOBOL_clean",
+   "uc_volume": 692.7280703674342,
+   "density": 1.9728755812221213,
+   "date_created": "2022-03-01T12:38:32.648914"
+}

@@ -1,0 +1,57 @@
+{
+   "cif_okay": true,
+   "problematic": false,
+   "has_oms": false,
+   "metal_sites": [
+      {
+         "metal": "Al",
+         "type": "Closed",
+         "is_open": false,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 6,
+         "t_factor": 0.9892122184207021
+      },
+      {
+         "metal": "Al",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 6,
+         "t_factor": 0.9927330089733385
+      },
+      {
+         "metal": "Al",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 6,
+         "t_factor": 0.9877202899115621
+      },
+      {
+         "metal": "Al",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 6,
+         "t_factor": 0.9936363183759724
+      }
+   ],
+   "oms_density": 0.0006793271519423029,
+   "checksum": "f75f324039613d69db07925fbd2a3f614a6551bc717fd0233b44d786cd771045",
+   "metal_species": [
+      "Al"
+   ],
+   "non_metal_species": [
+      "O",
+      "H",
+      "C"
+   ],
+   "name": "MIL-53_ortho-xylene_ASR_EHALOP_manual",
+   "uc_volume": 1472.0447977691501,
+   "density": 0.9390055368652263,
+   "date_created": "2022-03-01T12:38:28.671189"
+}

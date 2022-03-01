@@ -1,0 +1,40 @@
+{
+   "cif_okay": true,
+   "problematic": false,
+   "has_oms": false,
+   "metal_sites": [
+      {
+         "metal": "Ag",
+         "type": "Closed",
+         "is_open": false,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.7163455906337729
+      },
+      {
+         "metal": "Ag",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.7163455906337729
+      }
+   ],
+   "oms_density": 0.0010711368407334166,
+   "checksum": "71f337cd5fde1f12f71e3e8f268154764492b296d7ff96d956ebe6d7849e5885",
+   "metal_species": [
+      "Ag"
+   ],
+   "non_metal_species": [
+      "Cl",
+      "H",
+      "C",
+      "N"
+   ],
+   "name": "OTARUX01_clean",
+   "uc_volume": 933.5875323971599,
+   "density": 1.9847646943041943,
+   "date_created": "2022-03-01T12:38:24.130532"
+}

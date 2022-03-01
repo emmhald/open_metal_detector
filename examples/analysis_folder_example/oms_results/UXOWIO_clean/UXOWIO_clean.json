@@ -1,0 +1,30 @@
+{
+   "cif_okay": true,
+   "problematic": false,
+   "has_oms": true,
+   "metal_sites": [
+      {
+         "metal": "Cu",
+         "type": "Cu_4L_over_open_plane",
+         "is_open": true,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.0
+      }
+   ],
+   "oms_density": 0.003052784555157713,
+   "checksum": "54a564427a81625465330bedf8d2117eebb0f37de6a40d6a2641ae354fcea705",
+   "metal_species": [
+      "Cu"
+   ],
+   "non_metal_species": [
+      "C",
+      "N",
+      "H"
+   ],
+   "name": "UXOWIO_clean",
+   "uc_volume": 327.56979142550006,
+   "density": 1.134106373478736,
+   "date_created": "2022-03-01T12:38:21.976550"
+}

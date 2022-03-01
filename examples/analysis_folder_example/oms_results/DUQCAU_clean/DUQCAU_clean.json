@@ -1,0 +1,56 @@
+{
+   "cif_okay": true,
+   "problematic": false,
+   "has_oms": true,
+   "metal_sites": [
+      {
+         "metal": "Pr",
+         "type": "Pr_7L_over_open_plane",
+         "is_open": true,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 7,
+         "t_factor": -1
+      },
+      {
+         "metal": "Pr",
+         "type": "Pr_7L_over_open_plane",
+         "is_open": true,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 7,
+         "t_factor": -1
+      },
+      {
+         "metal": "Pr",
+         "type": "Pr_7L_over_open_plane",
+         "is_open": true,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 7,
+         "t_factor": -1
+      },
+      {
+         "metal": "Pr",
+         "type": "Pr_7L_over_open_plane",
+         "is_open": true,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 7,
+         "t_factor": -1
+      }
+   ],
+   "oms_density": 0.0012151361135232114,
+   "checksum": "b9456ddf8c94521c8de461e1197b2d7fcfb98fb5d70136dd645e70be4092c406",
+   "metal_species": [
+      "Pr"
+   ],
+   "non_metal_species": [
+      "C",
+      "O"
+   ],
+   "name": "DUQCAU_clean",
+   "uc_volume": 822.9530740392222,
+   "density": 2.20290149734976,
+   "date_created": "2022-03-01T12:38:25.877336"
+}

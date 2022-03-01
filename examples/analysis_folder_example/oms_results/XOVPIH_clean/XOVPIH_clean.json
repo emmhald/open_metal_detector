@@ -1,0 +1,39 @@
+{
+   "cif_okay": true,
+   "problematic": false,
+   "has_oms": true,
+   "metal_sites": [
+      {
+         "metal": "Ce",
+         "type": "Ce_7L_over_open_plane",
+         "is_open": true,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 7,
+         "t_factor": -1
+      },
+      {
+         "metal": "Ce",
+         "type": "Ce_7L_over_open_plane",
+         "is_open": true,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 7,
+         "t_factor": -1
+      }
+   ],
+   "oms_density": 0.0012763761856790107,
+   "checksum": "a0d6adeb693d9f0dce544c17ac5a6b0ff014a4d08e005beedf3f05eca856d394",
+   "metal_species": [
+      "Ce"
+   ],
+   "non_metal_species": [
+      "C",
+      "O",
+      "H"
+   ],
+   "name": "XOVPIH_clean",
+   "uc_volume": 783.4680803512617,
+   "density": 1.5103529887517573,
+   "date_created": "2022-03-01T12:38:33.550180"
+}

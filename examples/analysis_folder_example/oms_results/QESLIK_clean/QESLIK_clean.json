@@ -1,0 +1,39 @@
+{
+   "cif_okay": true,
+   "problematic": false,
+   "has_oms": false,
+   "metal_sites": [
+      {
+         "metal": "In",
+         "type": "Closed",
+         "is_open": false,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 6,
+         "t_factor": 0.8704205902446073
+      },
+      {
+         "metal": "In",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 6,
+         "t_factor": 0.870420590244607
+      }
+   ],
+   "oms_density": 0.0031149130905710064,
+   "checksum": "6a286d18b96ae5fc186d2078b07c4696476db0339936c4a566c424a7c4c3eba3",
+   "metal_species": [
+      "In"
+   ],
+   "non_metal_species": [
+      "C",
+      "O",
+      "P"
+   ],
+   "name": "QESLIK_clean",
+   "uc_volume": 321.03624432638225,
+   "density": 2.625516170573944,
+   "date_created": "2022-03-01T12:38:21.715501"
+}

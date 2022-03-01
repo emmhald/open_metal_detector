@@ -1,0 +1,39 @@
+{
+   "cif_okay": true,
+   "problematic": false,
+   "has_oms": false,
+   "metal_sites": [
+      {
+         "metal": "Nd",
+         "type": "Closed",
+         "is_open": false,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 9,
+         "t_factor": -1
+      },
+      {
+         "metal": "Nd",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 9,
+         "t_factor": -1
+      }
+   ],
+   "oms_density": 0.0012430587495763186,
+   "checksum": "2800ca25ed3b18defe4d8c3dbed9094c3542a12c60f0bf0629963e96c8ec3763",
+   "metal_species": [
+      "Nd"
+   ],
+   "non_metal_species": [
+      "C",
+      "O",
+      "H"
+   ],
+   "name": "ILIGEP_clean",
+   "uc_volume": 804.467206671316,
+   "density": 1.8592964047113594,
+   "date_created": "2022-03-01T12:38:32.838698"
+}

@@ -1,0 +1,39 @@
+{
+   "cif_okay": true,
+   "problematic": false,
+   "has_oms": false,
+   "metal_sites": [
+      {
+         "metal": "Cu",
+         "type": "Closed",
+         "is_open": false,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.7824042525644477
+      },
+      {
+         "metal": "Cu",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.7824042525644477
+      }
+   ],
+   "oms_density": 0.0011038904467814642,
+   "checksum": "6c9bca82b01a2fcdcb532d9ef631c7c19dbabd5ca088d24081b6b154f229bb6a",
+   "metal_species": [
+      "Cu"
+   ],
+   "non_metal_species": [
+      "H",
+      "C",
+      "N"
+   ],
+   "name": "FAPYEA04_clean",
+   "uc_volume": 905.8869953224341,
+   "density": 1.5835403552005134,
+   "date_created": "2022-03-01T12:38:30.460100"
+}

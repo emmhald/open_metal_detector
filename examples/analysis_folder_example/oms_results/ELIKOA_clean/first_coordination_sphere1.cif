@@ -1,0 +1,33 @@
+# generated using pymatgen
+data_EuO6
+_symmetry_space_group_name_H-M   'P 1'
+_cell_length_a   9.34100000
+_cell_length_b   9.84900000
+_cell_length_c   11.42200000
+_cell_angle_alpha   94.07600000
+_cell_angle_beta   98.57700000
+_cell_angle_gamma   110.92700000
+_symmetry_Int_Tables_number   1
+_chemical_formula_structural   EuO6
+_chemical_formula_sum   'Eu1 O6'
+_cell_volume   961.68914895
+_cell_formula_units_Z   1
+loop_
+ _symmetry_equiv_pos_site_id
+ _symmetry_equiv_pos_as_xyz
+  1  'x, y, z'
+loop_
+ _atom_site_type_symbol
+ _atom_site_label
+ _atom_site_symmetry_multiplicity
+ _atom_site_fract_x
+ _atom_site_fract_y
+ _atom_site_fract_z
+ _atom_site_occupancy
+  Eu  Eu0  1  0.28199000  0.54536000  0.98529000  1
+  O  O1  1  0.05500000  0.34100000  0.96820000  1
+  O  O2  1  0.45290000  0.73810000  0.88880000  1
+  O  O3  1  0.28480000  0.38980000  0.80800000  1
+  O  O4  1  0.12060000  0.50300000  0.77740000  1
+  O  O5  1  0.18260000  0.72930000  0.98930000  1
+  O  O6  1  0.41010000  0.39950000  1.07450000  1

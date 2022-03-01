@@ -1,0 +1,93 @@
+{
+   "cif_okay": true,
+   "problematic": false,
+   "has_oms": false,
+   "metal_sites": [
+      {
+         "metal": "Zn",
+         "type": "Closed",
+         "is_open": false,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9733842801332359
+      },
+      {
+         "metal": "Zn",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9733842801332349
+      },
+      {
+         "metal": "Zn",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9733561917855619
+      },
+      {
+         "metal": "Zn",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9733842801332354
+      },
+      {
+         "metal": "Zn",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9733842801332353
+      },
+      {
+         "metal": "Zn",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9733842801332364
+      },
+      {
+         "metal": "Zn",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9733842801332349
+      },
+      {
+         "metal": "Zn",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9733561917855614
+      }
+   ],
+   "oms_density": 0.0002304469355581825,
+   "checksum": "dcca9ded06eb82c4f407becf1e7ebbf7a6110603ba191d7721a41ecd9d340f8b",
+   "metal_species": [
+      "Zn"
+   ],
+   "non_metal_species": [
+      "H",
+      "O",
+      "C"
+   ],
+   "name": "MOF-5_ASR_MIBQAR_clean",
+   "uc_volume": 4339.393785288688,
+   "density": 0.5892907621272938,
+   "date_created": "2022-03-01T12:38:21.801189"
+}

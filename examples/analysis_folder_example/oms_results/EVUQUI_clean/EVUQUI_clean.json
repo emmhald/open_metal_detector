@@ -1,0 +1,40 @@
+{
+   "cif_okay": true,
+   "problematic": false,
+   "has_oms": true,
+   "metal_sites": [
+      {
+         "metal": "Nd",
+         "type": "Nd_6L_over_open_plane",
+         "is_open": true,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 6,
+         "t_factor": 0.28607577888444735
+      },
+      {
+         "metal": "Nd",
+         "type": "Nd_6L_over_open_plane",
+         "is_open": true,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 6,
+         "t_factor": 0.28607577888444735
+      }
+   ],
+   "oms_density": 0.0010084684811483796,
+   "checksum": "204d440b7220e69e0cf15d65dbc8a0a078b216797a2348340bff072a61a5bca6",
+   "metal_species": [
+      "Nd"
+   ],
+   "non_metal_species": [
+      "O",
+      "H",
+      "C",
+      "N"
+   ],
+   "name": "EVUQUI_clean",
+   "uc_volume": 991.6026318058683,
+   "density": 1.5355039687214715,
+   "date_created": "2022-03-01T12:38:23.706694"
+}

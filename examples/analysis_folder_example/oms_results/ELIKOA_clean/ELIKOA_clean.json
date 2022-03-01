@@ -1,0 +1,39 @@
+{
+   "cif_okay": true,
+   "problematic": false,
+   "has_oms": true,
+   "metal_sites": [
+      {
+         "metal": "Eu",
+         "type": "Eu_6L_over_open_plane",
+         "is_open": true,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 6,
+         "t_factor": 0.2900194593403391
+      },
+      {
+         "metal": "Eu",
+         "type": "Eu_6L_over_open_plane",
+         "is_open": true,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 6,
+         "t_factor": 0.29001945934033924
+      }
+   ],
+   "oms_density": 0.0010398370420355014,
+   "checksum": "1a9abe653a55fb8e6c888e164d74058a4f0a772180fa783d72045506921a0439",
+   "metal_species": [
+      "Eu"
+   ],
+   "non_metal_species": [
+      "O",
+      "H",
+      "C"
+   ],
+   "name": "ELIKOA_clean",
+   "uc_volume": 961.6891489482624,
+   "density": 1.5580817886257323,
+   "date_created": "2022-03-01T12:38:22.286229"
+}

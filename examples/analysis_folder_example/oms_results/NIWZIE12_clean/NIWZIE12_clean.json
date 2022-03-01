@@ -1,0 +1,39 @@
+{
+   "cif_okay": true,
+   "problematic": false,
+   "has_oms": false,
+   "metal_sites": [
+      {
+         "metal": "Mg",
+         "type": "Closed",
+         "is_open": false,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 6,
+         "t_factor": 0.9552822951302923
+      },
+      {
+         "metal": "Mg",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 6,
+         "t_factor": 0.9552822951302924
+      }
+   ],
+   "oms_density": 0.002664581306166941,
+   "checksum": "a1b40a295517c4c79c94fe91e1a35af8f8ca1fde3aa708a91e4c6c46a5670416",
+   "metal_species": [
+      "Mg"
+   ],
+   "non_metal_species": [
+      "C",
+      "O",
+      "H"
+   ],
+   "name": "NIWZIE12_clean",
+   "uc_volume": 375.29348332722566,
+   "density": 1.4101979765950319,
+   "date_created": "2022-03-01T12:38:22.394102"
+}

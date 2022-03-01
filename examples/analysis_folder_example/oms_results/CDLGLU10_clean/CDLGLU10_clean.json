@@ -1,0 +1,58 @@
+{
+   "cif_okay": true,
+   "problematic": false,
+   "has_oms": true,
+   "metal_sites": [
+      {
+         "metal": "Cd",
+         "type": "Cd_5L_over_open_plane",
+         "is_open": true,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 5,
+         "t_factor": 0.45001751697608466
+      },
+      {
+         "metal": "Cd",
+         "type": "Cd_5L_over_open_plane",
+         "is_open": true,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 5,
+         "t_factor": 0.45001751697608605
+      },
+      {
+         "metal": "Cd",
+         "type": "Cd_5L_over_open_plane",
+         "is_open": true,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 5,
+         "t_factor": 0.45001751697608655
+      },
+      {
+         "metal": "Cd",
+         "type": "Cd_5L_over_open_plane",
+         "is_open": true,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 5,
+         "t_factor": 0.45001751697608655
+      }
+   ],
+   "oms_density": 0.0010956129796600939,
+   "checksum": "59188c4b46b993090ae201630f238ee4dc81cd57d7bffea7993714b634151a0c",
+   "metal_species": [
+      "Cd"
+   ],
+   "non_metal_species": [
+      "O",
+      "H",
+      "C",
+      "N"
+   ],
+   "name": "CDLGLU10_clean",
+   "uc_volume": 912.7310633999999,
+   "density": 1.8740648181688422,
+   "date_created": "2022-03-01T12:38:26.967949"
+}
