@@ -12,8 +12,8 @@ The first step is to create a collection containing all the desired CIF files. W
 this by pointing to a folder containing the CIF files.
 
 ```
-from omsdetector import MofCollection 
-mof_coll = MofCollection.from_folder(collection_folder="path to cif folder", 
+from omsdetector import MofCollection
+mof_coll = MofCollection.from_folder(collection_folder="path to cif folder",
                                      analysis_folder="path to analysis folder")
 ```
 
@@ -38,7 +38,7 @@ mof_coll.summarize_tfactors()
 
 The summarize_results() method generates a table that summarizes the number of open metal sites found for each metal type.
 The summarize_tfactors() method generates histograms (and stores them) for the distribution of the t-factors, which indicate
-the degree of deviation from a closed coordination sphere for tetra, penta, and hexa-coordinated coordination spheres. 
+the degree of deviation from a closed coordination sphere for tetra, penta, and hexa-coordinated coordination spheres.
 
 Finaly, a collection can be filtered to create a sub-collection using the following filters:
 
@@ -69,3 +69,19 @@ See the example jupyter notebook for more details.
 
 Chung, Yongchul; Haldoupis, Emmanuel; Bucior, Benjamin; Haranczyk, Maciej ; Zhang, Hongda; Vogiatzis, Konstantinos; Milisavljevic, Marija; Ling, Sanliang; Camp, Jeffrey; Slater, Ben; Siepmann, J.; Sholl, David; Snurr, Randall *Computation-Ready, Experimental Metal-Organic Framework Database 2018: Additional Structures, Open Metal Sites, and Crystal Reconstruction* (submited to Chemistry of Materials)
 
+# March 1, 2022 Update
+Updated March 1, 2022
+Author: Grier M. Jones
+University of Tennessee,Knoxville
+
+Updated pymatgen dependencies
+
+# Easy install for jupyter
+Create conda environment, link it to a jupyter kernel, and install required packages
+```
+conda create --name omd
+conda activate omd
+ipython kernel install --user --name=omd
+python3 -m pip install -r requirements.txt
+python3 setup.py install
+```
