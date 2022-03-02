@@ -1,0 +1,904 @@
+{
+   "cif_okay": true,
+   "problematic": false,
+   "has_oms": false,
+   "metal_sites": [
+      {
+         "metal": "Al",
+         "type": "Closed",
+         "is_open": false,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9241506014952645
+      },
+      {
+         "metal": "Al",
+         "type": "Closed",
+         "is_open": false,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9308550360800847
+      },
+      {
+         "metal": "Fe",
+         "type": "Closed",
+         "is_open": false,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 6,
+         "t_factor": 0.8255172335792919
+      },
+      {
+         "metal": "Fe",
+         "type": "Closed",
+         "is_open": false,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 6,
+         "t_factor": 0.8419275039548708
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9862638276972251
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9820358890095114
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.987881922324588
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9822951364534536
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9863536097388177
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9858507689666648
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.983672133941472
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9819431525957043
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9759623472721711
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9810938025161865
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9846988283078244
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9818931894933196
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9815763908660041
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9824567282905489
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9827682640127215
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9672130269415458
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9707232638668517
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9947840983296863
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9873259551226217
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9871915496602665
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9902856565888254
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9918460117815648
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9765506210682803
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9653542733502886
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9720459433524241
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9901053354458992
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9803063100198753
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9852564560751068
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9898194869884527
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9865771764135868
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9831246787567285
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9705726844148588
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9787703769550492
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9837118132250643
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9839882681637371
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.979596103411607
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9790768511572228
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9811034819801525
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9834360799290183
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9815567629025046
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9540965439260684
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.977952923610424
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9722300356416873
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9780964529823463
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.976477976415005
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9701526508875998
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9787661525438612
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9545209978348557
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9713995621217258
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9726931875858206
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9802701395956686
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9738035463128888
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9748475788455588
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9846744254877748
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9683018498832079
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9908015113883053
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9598172507785201
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9906806576934332
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9889623735064637
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9882888601081729
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9906985421841756
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9617403956673855
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.981430859261011
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9699716461243092
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9788291626793273
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9865998192321273
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.984595882748107
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9911609282580245
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9865564939725037
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9790304149326541
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9800602817473245
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9840620460567555
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9904218571323334
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9908751933816313
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9858504137362002
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9871781234094331
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9838864716961573
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9827676224377278
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9797414433928425
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9792890983298024
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9723861755024403
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9738618460491377
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9658181533463552
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9573684511595876
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9786783118383887
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9592605225305393
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9812818093408405
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9767922297470334
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9855519259189782
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9657492128017292
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.975070494359954
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9725648705776856
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9812728075403082
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.981334407104973
+      }
+   ],
+   "oms_density": 0.007590781384855968,
+   "checksum": "5c677eb57a1e5cb95df0870c24a610a7cffbb2e0250ecd57a1dbdcb71c97f9e4",
+   "metal_species": [
+      "Al",
+      "Si",
+      "Fe"
+   ],
+   "non_metal_species": [
+      "H",
+      "O"
+   ],
+   "name": "zsmfixed",
+   "uc_volume": 5269.549730387735,
+   "density": 1.8849311176637695,
+   "date_created": "2022-03-01T15:10:22.689095"
+}
