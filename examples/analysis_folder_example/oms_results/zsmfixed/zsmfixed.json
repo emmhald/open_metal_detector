@@ -889,9 +889,9 @@
    "oms_density": 0.007590781384855968,
    "checksum": "5c677eb57a1e5cb95df0870c24a610a7cffbb2e0250ecd57a1dbdcb71c97f9e4",
    "metal_species": [
+      "Fe",
       "Al",
-      "Si",
-      "Fe"
+      "Si"
    ],
    "non_metal_species": [
       "H",
@@ -900,5 +900,5 @@
    "name": "zsmfixed",
    "uc_volume": 5269.549730387735,
    "density": 1.8849311176637695,
-   "date_created": "2022-03-01T15:10:22.689095"
+   "date_created": "2022-03-02T13:04:05.269583"
 }
