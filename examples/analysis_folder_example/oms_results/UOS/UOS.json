@@ -1,0 +1,235 @@
+{
+   "cif_okay": true,
+   "problematic": false,
+   "has_oms": false,
+   "metal_sites": [
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9990485232507565
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9990485232507567
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9990485232507571
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9990485232507573
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9990485232507571
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9990485232507573
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9990485232507567
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9990485232507567
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9986333978144202
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9986333978144197
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.998633397814421
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9986333978144202
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.998633397814421
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9986333978144204
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9986333978144197
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.99863339781442
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9985630199575862
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9985630199575862
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9985630199575855
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9985630199575847
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": true,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9963468576946671
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9963468576946671
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9963468576946674
+      },
+      {
+         "metal": "Si",
+         "type": "Closed",
+         "is_open": false,
+         "unique": false,
+         "problematic": false,
+         "number_of_linkers": 4,
+         "t_factor": 0.9963468576946674
+      }
+   ],
+   "oms_density": 0.0022025752787331017,
+   "checksum": "235bcd53c630b4e0cba6255a7f5473f98feb6db72d27202b7d51b14b2573a38a",
+   "metal_species": [
+      "Si"
+   ],
+   "non_metal_species": [
+      "O"
+   ],
+   "name": "UOS",
+   "uc_volume": 1362.0419828400002,
+   "density": 1.7580484953559852,
+   "date_created": "2022-03-08T13:13:24.766409"
+}
