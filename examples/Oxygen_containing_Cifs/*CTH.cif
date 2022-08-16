@@ -1,0 +1,86 @@
+data_*CTH
+
+
+#**************************************************************************
+#
+# CIF taken from the IZA-SC Database of Zeolite Structures
+# Ch. Baerlocher and L.B. McCusker
+# Database of Zeolite Structures: http://www.iza-structure.org/databases/ 
+#
+# The atom coordinates and the cell parameters were optimized with DLS76
+# assuming a pure SiO2 composition.
+#
+#**************************************************************************
+
+
+_cell_length_a    10.45783
+_cell_length_b    27.76067
+_cell_length_c    27.20226
+_cell_angle_alpha   90.00000
+_cell_angle_beta    90.00000
+_cell_angle_gamma   90.00000
+_cell_volume 7897.26
+_symmetry_space_group_name_H-M 'Cmcm'
+_symmetry_Int_Tables_number         63
+_symmetry_cell_setting             orthorhombic
+
+
+loop_
+  _symmetry_equiv_pos_as_xyz
+X,Y,Z
+X,-Y,-Z
+X,Y,-Z+1/2
+X,-Y,Z+1/2
+-X,-Y,-Z
+-X,Y,Z
+-X,-Y,Z+1/2
+-X,Y,-Z+1/2
+X+1/2,Y+1/2,Z
+X+1/2,-Y+1/2,-Z
+X+1/2,Y+1/2,-Z+1/2
+X+1/2,-Y+1/2,Z+1/2
+-X+1/2,-Y+1/2,-Z
+-X+1/2,Y+1/2,Z
+-X+1/2,-Y+1/2,Z+1/2
+-X+1/2,Y+1/2,-Z+1/2
+
+
+loop_
+  _atom_site_label
+  _atom_site_type_symbol
+  _atom_site_fract_x
+  _atom_site_fract_y
+  _atom_site_fract_z
+Si1   Si  0.25782   0.22171   0.10230 
+Si2   Si  0.25822   0.02487   0.10008 
+Si3   Si  0.25124   0.12576   0.04436 
+Si4   Si  0.34967   0.17974   0.19624 
+Si5   Si  0.35099   0.07054   0.19332 
+Si6   Si  0.00000   0.26601   0.06424 
+Si7   Si  0.00000   0.47560   0.05353 
+Si8   Si  0.00000   0.01875   0.55592 
+Si9   Si  0.00000   0.23095   0.54794 
+Si10  Si  0.00000   0.36642   0.02148 
+Si11  Si  0.00000   0.12433   0.52360 
+O1    O   0.12625   0.25065   0.09415 
+O2    O   0.23378   0.16687   0.08547 
+O3    O   0.37415   0.24609   0.07273 
+O4    O   0.28900   0.21969   0.16026 
+O5    O   0.37444   0.99011   0.08437 
+O6    O   0.27519   0.07463   0.07049 
+O7    O   0.12474   0.00032   0.08474 
+O8    O   0.26726   0.03607   0.15810 
+O9    O   0.12552   0.12320   0.01052 
+O10   O   0.37391   0.13958   0.01168 
+O11   O   0.32912   0.12562   0.17655 
+O12   O   0.28592   0.18442   0.25000 
+O13   O   0.50000   0.19073   0.20167 
+O14   O   0.50000   0.05713   0.18738 
+O15   O   0.30977   0.06407   0.25000 
+O16   O   0.00000   0.32397   0.06179 
+O17   O   0.00000   0.24324   0.00989 
+O18   O   0.00000   0.41784   0.04865 
+O19   O   0.00000   0.50000   0.00000 
+O20   O   0.00000   0.07679   0.55749 
+O21   O   0.00000   0.00000   0.50000 
+O22   O   0.00000   0.17333   0.55528 

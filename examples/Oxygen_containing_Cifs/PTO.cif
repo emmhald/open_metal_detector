@@ -1,0 +1,201 @@
+####################################################################### 
+# 
+# This file contains crystal structure data downloaded from the 
+# Cambridge Structural Database (CSD) hosted by the Cambridge 
+# Crystallographic Data Centre (CCDC).
+# 
+# Full information about CCDC data access policies and citation 
+# guidelines are available at http://www.ccdc.cam.ac.uk/access/V1 
+# 
+# Audit and citation data items may have been added by the CCDC. 
+# Please retain this information to preserve the provenance of 
+# this file and to allow appropriate attribution of the data. 
+# 
+#######################################################################
+
+data_As-made_PST-31_publ
+_audit_block_doi                 10.5517/ccdc.csd.cc26jpn3
+_database_code_depnum_ccdc_archive 'CCDC 2041835'
+loop_
+_citation_id
+_citation_doi
+_citation_year
+1 10.1002/anie.202015483 2021
+loop_
+_audit_author_name
+_audit_author_address
+'Donghui Jo'
+;KRICT
+South Korea
+;
+_audit_update_record             
+;
+2020-11-02 deposited with the CCDC.	2021-08-07 downloaded from the CCDC.
+;
+
+_pd_block_id                     2020-07-06T17:01|As-made_PST-31|Jo|PAL
+
+_audit_creation_method           'from EXP file using GSAS2CIF'
+_audit_creation_date             2020-07-06T17:01
+
+#=============================================================================
+# 5. OVERALL REFINEMENT & COMPUTING DETAILS
+
+_refine_special_details          
+; ?
+;
+_pd_proc_ls_special_details      
+; ?
+;
+
+# The following items are used to identify the programs used.
+_computing_molecular_graphics    ?
+_computing_publication_material  ?
+
+_refine_ls_weighting_scheme      ?
+_refine_ls_weighting_details     ?
+_refine_ls_hydrogen_treatment    ?
+_refine_ls_extinction_method     ?
+_refine_ls_extinction_coef       ?
+_refine_ls_number_constraints    ?
+
+_refine_ls_restrained_S_all      ?
+_refine_ls_restrained_S_obs      ?
+
+#==============================================================================
+# 6. SAMPLE PREPARATION DATA
+
+# (In the unusual case where multiple samples are used in a single
+#  Rietveld study, this information should be moved into the phase
+#  blocks)
+
+# The following three fields describe the preparation of the material.
+# The cooling rate is in K/min.  The pressure at which the sample was
+# prepared is in kPa.  The temperature of preparation is in K.
+
+_pd_prep_cool_rate               ?
+_pd_prep_pressure                ?
+_pd_prep_temperature             ?
+
+_pd_char_colour                  ? # use ICDD colour descriptions
+_refine_ls_shift/su_max          0.03
+_refine_ls_shift/su_mean         0.00
+_computing_structure_refinement  GSAS
+_refine_ls_number_parameters     172
+_refine_ls_goodness_of_fit_all   1.77
+_refine_ls_number_restraints     150
+_refine_ls_matrix_type           full
+#==============================================================================
+# 7. CHEMICAL, STRUCTURAL AND CRYSTAL DATA
+
+_pd_char_particle_morphology     ?
+
+_chemical_name_systematic        'As-made PST-31'
+_chemical_name_common            ?
+_chemical_formula_moiety         ?
+_chemical_formula_structural     ?
+_chemical_formula_analytical     ?
+_chemical_melting_point          ?
+_chemical_compound_source        ? # for minerals and
+# natural products
+_symmetry_space_group_name_Hall  ?
+
+_exptl_crystal_description       '< 100 nm'
+
+_cell_measurement_temperature    298
+
+_cell_special_details            
+; ?
+;
+
+_geom_special_details            ?
+
+# The following item identifies the program(s) used (if appropriate).
+_computing_structure_solution    ?
+
+#==============================================================================
+
+# 8. Phase information from GSAS
+
+_pd_phase_name                   As-made_PST-31
+_cell_length_a                   13.9261(5)
+_cell_length_b                   14.4188(4)
+_cell_length_c                   17.3718(7)
+_cell_angle_alpha                90.0
+_cell_angle_beta                 129.2048(16)
+_cell_angle_gamma                90.0
+_cell_volume                     2702.99(16)
+_symmetry_cell_setting           monoclinic
+_symmetry_space_group_name_H-M   P21/c
+loop_
+_symmetry_equiv_pos_site_id
+_symmetry_equiv_pos_as_xyz
+1 +x,+y,+z
+2 -x,+y+1/2,-z+1/2
+-1 -x,-y,-z
+-2 +x,-y+1/2,+z+1/2
+
+# ATOMIC COORDINATES AND DISPLACEMENT PARAMETERS
+
+
+loop_
+_atom_site_type_symbol
+_atom_site_label
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+_atom_site_occupancy
+_atom_site_thermal_displace_type
+_atom_site_U_iso_or_equiv
+_atom_site_symmetry_multiplicity
+Si Si1 0.33214(22) 0.43375(22) 0.04656(18) 1.0 Uiso 0.01348(18) 4
+Si Si2 0.59942(22) 0.10842(22) 0.33167(18) 1.0 Uiso 0.01348(18) 4
+Si Si3 0.44166(22) 0.10163(22) 0.10391(18) 1.0 Uiso 0.01348(18) 4
+Si Si4 0.28640(22) 0.57969(22) 0.50483(18) 1.0 Uiso 0.01348(18) 4
+Si Si5 0.26647(22) 0.79398(21) 0.13969(18) 1.0 Uiso 0.01348(18) 4
+Si Si6 0.61097(23) 0.37489(21) 0.14682(18) 1.0 Uiso 0.01348(18) 4
+Si Si7 0.23307(20) 0.05076(22) 0.32719(18) 1.0 Uiso 0.01348(18) 4
+Si Si8 0.38402(23) 0.20309(21) 0.31387(18) 1.0 Uiso 0.01348(18) 4
+Si Si9 0.26193(19) 0.24784(19) 0.09636(17) 1.0 Uiso 0.01348(18) 4
+Si Si10 0.00627(23) 0.34921(20) 0.47828(18) 1.0 Uiso 0.01348(18) 4
+Si Si11 0.00922(22) 0.52598(22) 0.37978(17) 1.0 Uiso 0.01348(18) 4
+Si Si12 0.55942(22) 0.20761(22) 0.01890(18) 1.0 Uiso 0.01348(18) 4
+O O1 0.32143(22) 0.52410(14) 0.09405(15) 1.0 Uiso 0.01369 4
+O O2 0.47526(13) 0.41394(23) 0.09868(20) 1.0 Uiso 0.01369 4
+O O3 0.25568(21) 0.05165(26) 0.42988(10) 1.0 Uiso 0.01369 4
+O O4 0.27620(19) 0.34747(13) 0.06437(16) 1.0 Uiso 0.01369 4
+O O5 0.54541(25) 0.07988(24) 0.22108(11) 1.0 Uiso 0.01369 4
+O O6 0.31167(19) 0.69638(13) 0.13049(19) 1.0 Uiso 0.01369 4
+O O7 0.48623(13) 0.13297(19) 0.33106(15) 1.0 Uiso 0.01369 4
+O O8 0.37748(21) 0.00791(13) 0.04458(20) 1.0 Uiso 0.01369 4
+O O9 0.34005(14) 0.17204(14) 0.08801(15) 1.0 Uiso 0.01369 4
+O O10 0.50727(14) 0.15034(18) 0.06433(11) 1.0 Uiso 0.01369 4
+O O11 0.70175(18) 0.37448(16) 0.40540(11) 1.0 Uiso 0.01369 4
+O O12 0.14700(14) 0.54598(23) 0.41952(19) 1.0 Uiso 0.01369 4
+O O13 0.67603(14) 0.15459(17) 0.04094(14) 1.0 Uiso 0.01369 4
+O O14 0.66321(25) 0.31639(20) 0.24494(11) 1.0 Uiso 0.01369 4
+O O15 0.12014(14) 0.79008(20) 0.08102(21) 1.0 Uiso 0.01369 4
+O O16 0.70146(17) 0.46115(14) 0.17624(18) 1.0 Uiso 0.01369 4
+O O17 0.60404(22) 0.30937(14) 0.06910(13) 1.0 Uiso 0.01369 4
+O O18 0.28810(15) 0.14364(15) 0.31702(15) 1.0 Uiso 0.01369 4
+O O19 0.08621(18) 0.04523(25) 0.23741(14) 1.0 Uiso 0.01369 4
+O O20 0.31135(24) 0.25321(22) 0.20868(11) 1.0 Uiso 0.01369 4
+O O21 0.45115(27) 0.27994(18) 0.40078(13) 1.0 Uiso 0.01369 4
+O O22 0.11870(15) 0.22055(18) 0.02372(21) 1.0 Uiso 0.01369 4
+O O23 -0.00131(22) 0.41949(13) 0.40217(14) 1.0 Uiso 0.01369 4
+O O24 0.02310(18) 0.09304(17) 0.06515(11) 1.0 Uiso 0.01369 4
+N N1 0.04722(28) 0.43513(25) 0.16675(27) 1.0 Uiso 0.08 4
+N N2 0.14618(28) 0.40843(26) 0.25480(28) 1.0 Uiso 0.08 4
+C C1 0.0460(5) 0.5177(6) 0.11930(31) 1.0 Uiso 0.08 4
+C C2 0.2640(5) 0.4539(6) 0.3106(6) 1.0 Uiso 0.08 4
+C C3 0.12100(34) 0.3330(4) 0.28423(31) 1.0 Uiso 0.08 4
+C C4 -0.00033(29) 0.31112(28) 0.21444(28) 1.0 Uiso 0.08 4
+C C5 -0.0503(4) 0.3732(4) 0.13342(31) 1.0 Uiso 0.08 4
+C C6 -0.0585(6) 0.2318(6) 0.2202(5) 1.0 Uiso 0.08 4
+C C7 0.0674(4) 0.5112(10) 0.04644(35) 1.0 Uiso 0.08 4
+
+# If you change Z, be sure to change all 3 of the following
+_chemical_formula_sum            'C7 N2 O24 Si12'
+_chemical_formula_weight         833.10
+_cell_formula_units_Z            4
+

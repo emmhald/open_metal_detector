@@ -1,0 +1,138 @@
+data_RWY
+
+#**************************************************************************
+#
+# CIF taken from the IZA-SC Database of Zeolite Structures
+# Ch. Baerlocher and L.B. McCusker
+# Database of Zeolite Structures: http://www.iza-structure.org/databases/ 
+#
+# The atom coordinates and the cell parameters were optimized with DLS76
+# assuming a pure SiO2 composition.
+#
+#**************************************************************************
+
+_cell_length_a    18.50170
+_cell_length_b    18.50170
+_cell_length_c    18.50170
+_cell_angle_alpha   90.00000
+_cell_angle_beta    90.00000
+_cell_angle_gamma   90.00000
+_cell_volume 6333.4
+
+
+_symmetry_space_group_name_H-M 'I M -3 M'
+_symmetry_Int_Tables_number         229
+_symmetry_cell_setting             cubic
+
+
+
+loop_
+  _symmetry_equiv_pos_as_xyz
+X,Y,Z
+Z,X,Y
+Y,Z,X
+X,Z,Y
+Y,X,Z
+Z,Y,X
+X,-Y,-Z
+Z,-X,-Y
+Y,-Z,-X
+X,-Z,-Y
+Y,-X,-Z
+Z,-Y,-X
+-X,Y,-Z
+-Z,X,-Y
+-Y,Z,-X
+-X,Z,-Y
+-Y,X,-Z
+-Z,Y,-X
+-X,-Y,Z
+-Z,-X,Y
+-Y,-Z,X
+-X,-Z,Y
+-Y,-X,Z
+-Z,-Y,X
+-X,-Y,-Z
+-Z,-X,-Y
+-Y,-Z,-X
+-X,-Z,-Y
+-Y,-X,-Z
+-Z,-Y,-X
+-X,Y,Z
+-Z,X,Y
+-Y,Z,X
+-X,Z,Y
+-Y,X,Z
+-Z,Y,X
+X,-Y,Z
+Z,-X,Y
+Y,-Z,X
+X,-Z,Y
+Y,-X,Z
+Z,-Y,X
+X,Y,-Z
+Z,X,-Y
+Y,Z,-X
+X,Z,-Y
+Y,X,-Z
+Z,Y,-X
+X+1/2,Y+1/2,Z+1/2
+Z+1/2,X+1/2,Y+1/2
+Y+1/2,Z+1/2,X+1/2
+X+1/2,Z+1/2,Y+1/2
+Y+1/2,X+1/2,Z+1/2
+Z+1/2,Y+1/2,X+1/2
+X+1/2,-Y+1/2,-Z+1/2
+Z+1/2,-X+1/2,-Y+1/2
+Y+1/2,-Z+1/2,-X+1/2
+X+1/2,-Z+1/2,-Y+1/2
+Y+1/2,-X+1/2,-Z+1/2
+Z+1/2,-Y+1/2,-X+1/2
+-X+1/2,Y+1/2,-Z+1/2
+-Z+1/2,X+1/2,-Y+1/2
+-Y+1/2,Z+1/2,-X+1/2
+-X+1/2,Z+1/2,-Y+1/2
+-Y+1/2,X+1/2,-Z+1/2
+-Z+1/2,Y+1/2,-X+1/2
+-X+1/2,-Y+1/2,Z+1/2
+-Z+1/2,-X+1/2,Y+1/2
+-Y+1/2,-Z+1/2,X+1/2
+-X+1/2,-Z+1/2,Y+1/2
+-Y+1/2,-X+1/2,Z+1/2
+-Z+1/2,-Y+1/2,X+1/2
+-X+1/2,-Y+1/2,-Z+1/2
+-Z+1/2,-X+1/2,-Y+1/2
+-Y+1/2,-Z+1/2,-X+1/2
+-X+1/2,-Z+1/2,-Y+1/2
+-Y+1/2,-X+1/2,-Z+1/2
+-Z+1/2,-Y+1/2,-X+1/2
+-X+1/2,Y+1/2,Z+1/2
+-Z+1/2,X+1/2,Y+1/2
+-Y+1/2,Z+1/2,X+1/2
+-X+1/2,Z+1/2,Y+1/2
+-Y+1/2,X+1/2,Z+1/2
+-Z+1/2,Y+1/2,X+1/2
+X+1/2,-Y+1/2,Z+1/2
+Z+1/2,-X+1/2,Y+1/2
+Y+1/2,-Z+1/2,X+1/2
+X+1/2,-Z+1/2,Y+1/2
+Y+1/2,-X+1/2,Z+1/2
+Z+1/2,-Y+1/2,X+1/2
+X+1/2,Y+1/2,-Z+1/2
+Z+1/2,X+1/2,-Y+1/2
+Y+1/2,Z+1/2,-X+1/2
+X+1/2,Z+1/2,-Y+1/2
+Y+1/2,X+1/2,-Z+1/2
+Z+1/2,Y+1/2,-X+1/2
+
+
+loop_
+  _atom_site_label
+  _atom_site_type_symbol
+  _atom_site_fract_x
+  _atom_site_fract_y
+  _atom_site_fract_z
+T1   Si   0.57650   0.69810   0.00000 
+O1   O    0.57021   0.75000   0.07021 
+O2   O    0.64459   0.64459   0.00000 
+O3   O    0.50000   0.65592   0.00000 
