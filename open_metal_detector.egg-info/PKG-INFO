@@ -1,0 +1,14 @@
+Metadata-Version: 2.1
+Name: open-metal-detector
+Version: 2018.12.3
+Summary: A tool to detect open metal sites in collections of MOFs.
+Home-page: 
+Author: Emmanuel Haldoupis
+Author-email: emmhald@gmail.com
+License: MIT
+Platform: UNKNOWN
+Requires-Python: >=3
+License-File: LICENSE
+
+UNKNOWN
+

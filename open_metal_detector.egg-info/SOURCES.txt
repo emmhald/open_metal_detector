@@ -1,0 +1,12 @@
+LICENSE
+README.md
+setup.py
+omsdetector/__init__.py
+omsdetector/atomic_parameters.py
+omsdetector/mof.py
+omsdetector/mof_collection.py
+open_metal_detector.egg-info/PKG-INFO
+open_metal_detector.egg-info/SOURCES.txt
+open_metal_detector.egg-info/dependency_links.txt
+open_metal_detector.egg-info/requires.txt
+open_metal_detector.egg-info/top_level.txt
